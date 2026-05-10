@@ -21,6 +21,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     const statStreak = document.getElementById('stat-streak');
     const statBonus = document.getElementById('stat-bonus');
     const closeEndBtn = document.getElementById('close-end-modal');
+    const playAgainBtn = document.getElementById('play-again-btn');
+
+    // === DŹWIĘKI (WEB AUDIO API) ===
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playBeep(freq, type, duration, vol=0.1) {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // === WIBRACJE (HAPTIC FEEDBACK) ===
+    function vibrate(pattern) {
+        if (navigator.vibrate) {
+            navigator.vibrate(pattern);
+        }
+    }
 
     // === STAN APLIKACJI ===
     let gameId = null;
@@ -94,9 +119,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isGameOver || isProcessing) return;
 
         if (key === 'ENTER') {
+            vibrate(20);
             await submitGuess();
         } else if (key === 'BACKSPACE') {
             if (currentTile > 0) {
+                vibrate(10); playBeep(300, 'sine', 0.1);
                 currentTile--;
                 currentGuess = currentGuess.slice(0, -1);
                 const tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
@@ -104,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 tile.classList.remove('filled');
             }
         } else if (currentTile < wordLength) {
+            vibrate(10); playBeep(400, 'sine', 0.1);
             currentGuess += key;
             const tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
             tile.textContent = key;
@@ -117,6 +145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentGuess.length !== wordLength) {
             showToast("Za krótkie słowo");
             shakeRow();
+            vibrate([50, 50, 50]); playBeep(150, 'sawtooth', 0.3, 0.2);
             return;
         }
 
@@ -132,6 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (res.status === 'error') {
                 showToast(res.message);
                 shakeRow();
+                vibrate([50, 50, 50]); playBeep(150, 'sawtooth', 0.3, 0.2);
                 isProcessing = false;
                 return;
             }
@@ -142,6 +172,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (res.game_state.includes('pending_ad')) {
                 isGameOver = true;
+                if (res.game_state === 'won_pending_ad') {
+                    vibrate([100, 50, 100, 50, 200]); playBeep(600, 'triangle', 0.5);
+                } else {
+                    vibrate(300); playBeep(200, 'sawtooth', 0.6);
+                }
                 setTimeout(() => triggerAdGateway(res.game_state), 1000);
             } else {
                 currentRow++;
@@ -246,8 +281,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     closeEndBtn.addEventListener('click', () => {
         endModal.style.display = 'none';
-        showToast("Zakończono dzienną próbę.");
+        showToast("Zakończono. Możesz zagrać w Free Play.");
     });
+
+    playAgainBtn.addEventListener('click', async () => {
+        endModal.style.display = 'none';
+        await resetGame('free');
+    });
+
+    async function resetGame(type) {
+        board.innerHTML = '';
+        document.querySelectorAll('.keyboard button').forEach(btn => btn.className = '');
+        document.querySelector('button[data-key="ENTER"]').className = 'wide-key';
+        document.querySelector('button[data-key="BACKSPACE"]').className = 'wide-key';
+        
+        currentRow = 0;
+        currentTile = 0;
+        currentGuess = "";
+        isGameOver = false;
+        isProcessing = false;
+        
+        try {
+            const response = await window.api.startGame(type);
+            gameId = response.game_id;
+            wordLength = response.word_length;
+            maxAttempts = response.attempts_left;
+            buildBoard();
+            showToast("Rozpoczęto nową grę (Tryb Free Play)");
+        } catch (e) {
+            showToast("Błąd resetowania gry.");
+        }
+    }
 
     // === OFFLINE / ONLINE DETEKCJA ===
     window.addEventListener('offline', () => {

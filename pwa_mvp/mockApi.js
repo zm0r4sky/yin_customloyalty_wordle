@@ -32,6 +32,13 @@ class WordleMockBackend {
     async startGame(type = 'daily') {
         await this._delay(300); // Symulacja opóźnienia sieci
         
+        if (type === 'free') {
+            const randIndex = Math.floor(Math.random() * this.dictionary.length);
+            this.dailyWord = this.dictionary[randIndex];
+        } else {
+            this.dailyWord = "SKLEP"; // Hardcoded for daily MVP
+        }
+
         const sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
         this.db.sessions[sessionId] = {
             type: type,
