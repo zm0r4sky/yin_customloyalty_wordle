@@ -94,7 +94,41 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             board.appendChild(row);
         }
+        
+        requestAnimationFrame(resizeBoard);
     }
+
+    function resizeBoard() {
+        const section = document.querySelector('.board-section');
+        const boardElem = document.querySelector('.board');
+        if (!section || !boardElem) return;
+        
+        // Dostępne miejsce (z uwzględnieniem paddingu 10px i 8px)
+        const availW = section.clientWidth - 20; 
+        const availH = section.clientHeight - 16; 
+        const gap = 4;
+        
+        // Wylicz maksymalny rozmiar kafelka, by zmieścił się na szerokość i wysokość
+        const maxTileW = (availW - (wordLength - 1) * gap) / wordLength;
+        const maxTileH = (availH - (maxAttempts - 1) * gap) / maxAttempts;
+        
+        // Zastosuj mniejszy z wymiarów (z limitem 65px) by zachować idealne kwadraty
+        const tileSize = Math.min(maxTileW, maxTileH, 65);
+        
+        // Oblicz dokładny wymiar całej planszy w pikselach
+        const boardW = (tileSize * wordLength) + ((wordLength - 1) * gap);
+        const boardH = (tileSize * maxAttempts) + ((maxAttempts - 1) * gap);
+        
+        boardElem.style.width = boardW + 'px';
+        boardElem.style.height = boardH + 'px';
+        
+        // Dynamicznie dopasuj czcionkę
+        document.querySelectorAll('.tile').forEach(tile => {
+            tile.style.fontSize = Math.max(12, tileSize * 0.45) + 'px';
+        });
+    }
+
+    window.addEventListener('resize', resizeBoard);
 
     // === OBSŁUGA KLAWIATURY ===
     function setupKeyboard() {
@@ -293,8 +327,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function resetGame(type) {
         board.innerHTML = '';
         document.querySelectorAll('.keyboard button').forEach(btn => btn.className = '');
-        document.querySelector('button[data-key="ENTER"]').className = 'wide-key';
-        document.querySelector('button[data-key="BACKSPACE"]').className = 'wide-key';
+        document.querySelector('button[data-key="ENTER"]').className = 'wide-key key-primary';
+        document.querySelector('button[data-key="BACKSPACE"]').className = 'wide-key key-secondary';
         
         currentRow = 0;
         currentTile = 0;

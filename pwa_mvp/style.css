@@ -76,50 +76,38 @@ body {
     position: relative;
 }
 
-/* ===== BOARD SECTION — fills remaining space, centers the grid ===== */
+/* ===== BOARD SECTION ===== */
 .board-section {
     flex: 1 1 0;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    padding: 6px 10px;
-    min-height: 0; /* critical for flex shrinking */
+    padding: 8px 10px;
+    min-height: 0;
 }
 
 /* ===== BOARD GRID ===== */
 .board {
     display: grid;
     grid-template-rows: repeat(var(--max-attempts), 1fr);
+    grid-template-columns: repeat(var(--word-length), 1fr);
     gap: 4px;
-    width: 100%;
-    height: 100%;
-    /* Don't let the board be wider than needed at max tile size */
-    max-width: min(100%, calc(var(--word-length) * 58px + (var(--word-length) - 1) * 4px));
-    max-height: 100%;
+    margin: 0 auto;
 }
 
 .board-row {
-    display: grid;
-    grid-template-columns: repeat(var(--word-length), 1fr);
-    gap: 4px;
-    min-height: 0; /* critical: allow flex/grid shrinking */
+    display: contents; /* tiles flow directly into the board grid */
 }
 
 .tile {
-    aspect-ratio: 1;
-    min-width: 0;
-    min-height: 0;
     width: 100%;
     height: 100%;
-    max-height: 100%; /* tile height is governed by the row */
-    justify-self: center;
-    align-self: center;
     border: 2px solid var(--border-color);
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: clamp(0.65rem, min(3vh, 4.5vw), 1.8rem);
+    font-size: 2rem;
     font-weight: 800;
     text-transform: uppercase;
     user-select: none;
@@ -155,14 +143,15 @@ body {
 /* ===== KEYBOARD SECTION — fixed at bottom, never scrolls ===== */
 .keyboard-section {
     flex-shrink: 0;
-    padding: 6px 4px;
-    padding-bottom: env(safe-area-inset-bottom, 6px);
+    padding: 6px 4px 16px 4px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
     background-color: var(--bg-color);
+
 }
 
 .keyboard {
     width: 100%;
-    max-width: 500px;
+    max-width: 600px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -198,6 +187,8 @@ body {
 
 .keyboard button.wide-key { flex: 1.5; font-size: clamp(0.6rem, 2.5vw, 0.85rem); }
 .keyboard button:active { transform: scale(0.95); }
+.keyboard button.key-primary { background-color: var(--correct-color); color: #fff; }
+.keyboard button.key-secondary { background-color: #555; color: #ccc; }
 .keyboard button.correct { background-color: var(--correct-color); }
 .keyboard button.present { background-color: var(--present-color); }
 .keyboard button.absent { background-color: var(--absent-color); opacity: 0.6; }
