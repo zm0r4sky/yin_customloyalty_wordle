@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yin-wordle-v2';
+const CACHE_NAME = 'yin-wordle-v3';
 const ASSETS = [
     './',
     './index.html',

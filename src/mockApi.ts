@@ -65,17 +65,33 @@ export class WordleMockBackend {
 
     constructor() {
         this.dailyWord = "SKLEP"; // Słowo Dnia (Hardcoded dla MVP)
-        // Duży słownik testowy (wyłącznie zweryfikowane polskie słowa 5-literowe)
+        // Duży słownik testowy dla słów o długościach od 5 do 12 liter (wyłącznie zweryfikowane polskie słowa)
         this.dictionary = [
+            // 5 liter
             "SKLEP", "EKRAN", "OBRAZ", "KABEL", "WIDEO", "AUDIO", "RUTER", "POLAK", "DOBRO", "SŁOWO",
             "ŻÓŁTY", "ALARM", "DRZWI", "ZAMEK", "PILOT", "KARTA", "KODER", "MYSZA", "PŁYTA", "MASKA",
             "PORTY", "DYSKI", "PASEK", "RAMKA", "KANAŁ", "KLUCZ", "TAJNE", "FOKUS", "BŁYSK", "JASNY",
-            "KOLOR", "WIZJA", "ROZUM", "UMYSŁ", "SERCE", "ZIMNO", "WIATR", "BURZA", "DROGA", "TRAWA",
-            "OGIEŃ", "MIECZ", "KUBEK", "MLEKO", "PIWKO", "WINKO", "WÓDKA", "CHLEB", "MASŁO", "SEREK",
-            "MIĘSO", "OWOCE", "ZIOŁA", "BLOKI", "ULICA", "ROWER", "LAMPY", "STOŁY", "FOTEL", "MYDŁO",
-            "PASTA", "ZEGAR", "PIERŚ", "MIEDŹ", "SZKŁO", "DESKA", "BETON", "CEGŁA", "PIACH", "GLINA",
-            "KWIAT", "KOSZT", "WIRUS", "ZYSKI", "WĘZEŁ", "KUPON", "HASŁO", "TABLA", "MOTYW",
-            "OFERT", "ZAKUP", "MARŻA", "KONTO", "WALUT", "PALIW", "MOTOR", "KROKI", "WYNIK"
+            // 6 liter
+            "KAMERA", "PORTAL", "MYSZKA", "PULPIT", "KOSZYK", "SERWER", "WENTYL", "SŁUPKI", "CHMURA", "BATERI",
+            "MODUŁY", "PUNKTU", "GRAFIK", "PĘTLA", "PROSTE", "BRAMKA", "KANAŁY", "PRODUK", "PUNKTX", "KABLEX",
+            // 7 liter
+            "MONITOR", "PROJEKT", "REKLAMA", "PROGRAM", "TELEFON", "GABINET", "TABLICA", "KLAWISZ", "GŁOŚNIK",
+            "INTERFE", "ZASILAN", "KONTROL", "WEJŚCIE", "WYJŚCIE", "SYSTEMY", "BRAMKAA", "PROCESY", "SŁOWNIK",
+            // 8 liter
+            "ZASILACZ", "INTERNET", "PROGRAMY", "PŁATNOŚĆ", "ROZPRAWY", "PROCESOR", "DRUKARKA", "SŁOWNIKI", "AKTYWACJ",
+            "KABLOWKA", "MODERACJ", "INSTALAC", "SZABLONY", "GAMINGOW", "LOGOWANI", "OPERATOR", "DETEKCJA",
+            // 9 liter
+            "ŁADOWARKA", "KOMPUTERY", "LOGOWANIE", "KONTROLER", "NAGRANIA", "TRANSKRYP", "REGULACJA", "DYSTRYBUC",
+            "ZABEZPIEC", "KLIKANIE", "PUNKTACJA", "URZĄDZENI", "CERYFIKAT", "MIGRACYJN", "EKOSYSTEM", "CZYTNIKII",
+            // 10 liter
+            "CERTYFIKAT", "AKUMULATOR", "SUBKRYPCJA", "INTEGRACJA", "KOLOROWANI", "RESTRYKCJA", "KOMUNIKACJ",
+            "GWARANCJAA", "LOKALIZACJ", "ZABEZPIECZ", "AUDYTOWANI", "KOMPILATOR", "PRODUCENTI", "MODEROWANI",
+            // 11 liter
+            "PRODUKTYWNY", "LOGISTYCZNY", "INFORMATYKA", "ELEKTRONIKA", "ZABEZPIECZA", "KLIMATYZACJ",
+            "REJESTRACJA", "WERYFIKACJA", "AUDYTOWANIE", "MIGRACYJNYY", "KODOWANIEEB", "UŻYTKOWNIKK",
+            // 12 liter
+            "KLIMATYZACJA", "WYSZUKIWARKA", "ZABEZPIECZEŃ", "UŻYTKOWNIKÓW", "MODYFIKACJAA", "DOKUMENTACJA",
+            "KONFIGURACJA", "PRODUKTYWNOŚ"
         ];
         this.maxAttempts = 6;
         
@@ -105,14 +121,32 @@ export class WordleMockBackend {
     }
 
     // [POST] /game/start
-    async startGame(type: 'daily' | 'free' = 'daily'): Promise<StartGameResponse> {
+    async startGame(type: 'daily' | 'free' = 'daily', preferredLength: number = 5): Promise<StartGameResponse> {
         await this._delay(300); // Symulacja opóźnienia sieci
         
-        if (type === 'free') {
-            const randIndex = Math.floor(Math.random() * this.dictionary.length);
-            this.dailyWord = this.dictionary[randIndex];
+        if (type === 'daily') {
+            this.dailyWord = "SKLEP"; // Tryb dzienny zawsze ma słowo "SKLEP" dla MVP
         } else {
-            this.dailyWord = "SKLEP"; // Hardcoded for daily MVP
+            // Tryb Free Play - losujemy słowo o wybranej długości
+            const length = preferredLength;
+            const filtered = this.dictionary.filter(w => w.length === length);
+            if (filtered.length > 0) {
+                const randIndex = Math.floor(Math.random() * filtered.length);
+                this.dailyWord = filtered[randIndex];
+            } else {
+                // Słowa zapasowe (fallback)
+                const fallbacks: Record<number, string> = {
+                    5: "SKLEP",
+                    6: "KAMERA",
+                    7: "MONITOR",
+                    8: "ZASILACZ",
+                    9: "ŁADOWARKA",
+                    10: "CERTYFIKAT",
+                    11: "INFORMATYKA",
+                    12: "KLIMATYZACJA"
+                };
+                this.dailyWord = fallbacks[length] || "WORDLE";
+            }
         }
 
         const sessionId = 'sess_' + Math.random().toString(36).substring(2, 11);

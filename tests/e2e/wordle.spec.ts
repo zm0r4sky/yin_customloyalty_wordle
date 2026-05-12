@@ -14,8 +14,9 @@ test.describe('Wordle PWA E2E Flows', () => {
   });
 
   test('should render game container, stats, and empty board on start', async ({ page }) => {
-    // Assert Header and Title
-    await expect(page.locator('h1')).toHaveText('WORDLE');
+    // Assert Header and Title Logo
+    await expect(page.locator('.logo-bcs')).toContainText('YIN');
+    await expect(page.locator('.logo-wordle')).toHaveText('Wordle');
     await expect(page.locator('#streak-display')).toContainText('🔥 0');
     await expect(page.locator('#points-display')).toContainText('💰 0 pkt');
 

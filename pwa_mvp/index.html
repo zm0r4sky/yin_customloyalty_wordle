@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>YIN Wordle - Gamifikacja</title>
+    <title>BCS WORDLE - Gamifikacja</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="header">
@@ -14,7 +14,37 @@
             <span id="streak-display">🔥 0</span>
             <span id="points-display">💰 0 pkt</span>
         </div>
-        <h1>WORDLE</h1>
+        
+        <!-- Premium logo styled like "BCS Nagradza" -->
+        <div class="logo-container">
+            <span class="logo-bcs">YIN<span class="logo-underline"></span></span>
+            <span class="logo-wordle">Wordle</span>
+        </div>
+
+        <!-- Top-Right Icons -->
+        <div class="header-controls">
+            <button id="btn-ranking" title="Ranking">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-svg">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+            </button>
+            <button id="btn-settings" title="Ustawienia">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-svg">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+            <button id="btn-help" title="Pomoc">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-svg">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </button>
+        </div>
+
         <div class="offline-indicator" id="offline-indicator" style="display: none;">
             <span>Zrywam połączenie...</span>
         </div>
@@ -26,34 +56,15 @@
 
         <!-- Board Section — grows to fill remaining space -->
         <section class="board-section">
-            <div id="board" class="board"></div>
+            <div class="board-wrapper">
+                <div id="daily-badge" class="daily-badge" style="display: none;">Słowo dnia</div>
+                <div id="board" class="board"></div>
+            </div>
         </section>
 
-        <!-- Keyboard Section — always pinned to bottom -->
+        <!-- Keyboard Section — dynamic keys generated via JS -->
         <section class="keyboard-section">
-            <div id="keyboard" class="keyboard">
-            <div class="keyboard-row">
-                <button data-key="A">A</button><button data-key="Ą">Ą</button><button data-key="B">B</button>
-                <button data-key="C">C</button><button data-key="Ć">Ć</button><button data-key="D">D</button>
-                <button data-key="E">E</button><button data-key="Ę">Ę</button><button data-key="F">F</button>
-            </div>
-            <div class="keyboard-row">
-                <button data-key="G">G</button><button data-key="H">H</button><button data-key="I">I</button>
-                <button data-key="J">J</button><button data-key="K">K</button><button data-key="L">L</button>
-                <button data-key="Ł">Ł</button><button data-key="M">M</button><button data-key="N">N</button>
-            </div>
-            <div class="keyboard-row">
-                <button data-key="O">O</button><button data-key="Ó">Ó</button><button data-key="P">P</button>
-                <button data-key="R">R</button><button data-key="S">S</button><button data-key="Ś">Ś</button>
-                <button data-key="T">T</button><button data-key="U">U</button><button data-key="W">W</button>
-            </div>
-            <div class="keyboard-row">
-                <button data-key="BACKSPACE" class="wide-key key-secondary">COFNIJ</button>
-                <button data-key="Y">Y</button><button data-key="Z">Z</button><button data-key="Ź">Ź</button>
-                <button data-key="Ż">Ż</button>
-                <button data-key="ENTER" class="wide-key key-primary">ENTER</button>
-            </div>
-            </div>
+            <div id="keyboard" class="keyboard"></div>
         </section>
     </main>
 
@@ -86,6 +97,112 @@
             </div>
             <button id="close-end-modal" class="btn-secondary">Zakończ</button>
             <button id="play-again-btn" class="btn-primary" style="margin-top:10px;">Graj następną grę (Free Play)</button>
+        </div>
+    </div>
+
+    <!-- Help Modal ("Jak grać") -->
+    <div id="help-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content info-modal">
+            <div class="modal-header-bar">
+                <span>Jak grać</span>
+                <button class="modal-close-btn" id="close-help">&times;</button>
+            </div>
+            <div class="modal-scrollable-body">
+                <p class="help-desc">Musisz odgadnąć ukryte słowo w 6 próbach, a kolor liter zmienia się, aby pokazać, jak blisko jesteś.</p>
+                <p class="help-subtitle">Aby rozpocząć grę wystarczy wpisać dowolne słowo, na przykład:</p>
+                
+                <div class="example-row">
+                    <div class="example-tile present">R</div>
+                    <div class="example-tile absent">Z</div>
+                    <div class="example-tile absent">E</div>
+                    <div class="example-tile present">K</div>
+                    <div class="example-tile correct">A</div>
+                </div>
+
+                <div class="legend-box">
+                    <p><span class="legend-letter absent">Z</span> , <span class="legend-letter absent">E</span> w ogóle nie występuje w słowie docelowym.</p>
+                    <p><span class="legend-letter present">R</span> , <span class="legend-letter present">K</span> jest w słowie, ale w złym miejscu.</p>
+                    <p><span class="legend-letter correct">A</span> jest w słowie i we właściwym miejscu.</p>
+                </div>
+
+                <p class="help-subtitle">Kolejna próba znalezienia pasujących liter w słowie docelowym.</p>
+                
+                <div class="example-row">
+                    <div class="example-tile absent">G</div>
+                    <div class="example-tile absent">Ł</div>
+                    <div class="example-tile correct">O</div>
+                    <div class="example-tile correct">W</div>
+                    <div class="example-tile correct">A</div>
+                </div>
+                
+                <p class="help-subtext">Tak blisko!</p>
+                
+                <div class="example-row">
+                    <div class="example-tile correct">K</div>
+                    <div class="example-tile correct">R</div>
+                    <div class="example-tile correct">O</div>
+                    <div class="example-tile correct">W</div>
+                    <div class="example-tile correct">A</div>
+                </div>
+
+                <p class="help-win-text">Słowo odgadnięte! 🏆</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal ("Ustawienia") -->
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content info-modal">
+            <div class="modal-header-bar">
+                <span>Ustawienia</span>
+                <button class="modal-close-btn" id="close-settings">&times;</button>
+            </div>
+            <div class="settings-body">
+                <!-- Word Length Selector -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Liczba Liter</h3>
+                    <div class="length-selector" id="length-selector">
+                        <button data-len="5">5</button>
+                        <button data-len="6">6</button>
+                        <button data-len="7">7</button>
+                        <button data-len="8">8</button>
+                        <button data-len="9">9</button>
+                        <button data-len="10">10</button>
+                        <button data-len="11">11</button>
+                        <button data-len="12">12</button>
+                    </div>
+                </div>
+
+                <!-- Custom Options List -->
+                <div class="settings-item">
+                    <div class="settings-text">
+                        <span class="settings-title">Zamień przyciski</span>
+                        <span class="settings-desc">Zamień przyciski "Enter" i "Backspace" miejscami</span>
+                    </div>
+                    <div class="settings-control">
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-swap-keys">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking Modal -->
+    <div id="ranking-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content info-modal">
+            <div class="modal-header-bar">
+                <span>Ranking</span>
+                <button class="modal-close-btn" id="close-ranking">&times;</button>
+            </div>
+            <div class="ranking-body">
+                <div class="ranking-icon-mock">📊</div>
+                <h3>Ranking online (Wkrótce)</h3>
+                <p>Moduł rankingu i globalnej rywalizacji będzie dostępny po zintegrowaniu aplikacji z programem lojalnościowym sklepu PrestaShop 8.</p>
+                <button id="close-ranking-btn" class="btn-primary">Rozumiem</button>
+            </div>
         </div>
     </div>
 
