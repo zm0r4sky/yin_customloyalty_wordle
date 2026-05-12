@@ -34,7 +34,7 @@ export interface SubmitWordResult {
 
 export interface StartGameResponse {
     status: 'success';
-    game_id: string;
+    game_token: string;
     word_length: number;
     max_attempts?: number;
     attempts_left: number;
@@ -175,8 +175,8 @@ export class WordleMockBackend {
     // [POST] /game/start
     async startGame(type: 'daily' | 'free' = 'daily', preferredLength: number = 5): Promise<StartGameResponse> {
         if (this.isRemoteActive()) {
-            const key = `yin_wordle_id_game_${type}_${preferredLength}`;
-            const savedIdGame = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+            const key = `yin_wordle_game_token_${type}_${preferredLength}`;
+            const savedGameToken = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
 
             try {
                 const response = await fetch(PRODUCTION_API_URL, {
@@ -188,7 +188,7 @@ export class WordleMockBackend {
                         length: preferredLength,
                         id_customer: this.idCustomer,
                         id_player: this.idPlayer,
-                        id_game: savedIdGame || undefined
+                        game_token: savedGameToken || undefined
                     })
                 });
                 const data = await response.json();
@@ -202,12 +202,12 @@ export class WordleMockBackend {
                 }
 
                 if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem(key, data.id_game);
+                    localStorage.setItem(key, data.game_token);
                 }
 
                 return {
                     status: "success",
-                    game_id: data.id_game,
+                    game_token: data.game_token,
                     word_length: data.length,
                     max_attempts: data.max_attempts || 6,
                     attempts_left: data.attempts_left,
@@ -256,14 +256,14 @@ export class WordleMockBackend {
 
         return {
             status: "success",
-            game_id: sessionId,
+            game_token: sessionId,
             word_length: this.dailyWord.length,
             attempts_left: this.maxAttempts
         };
     }
 
     // [POST] /game/submit-word
-    async submitWord(sessionId: string, wordRaw: string): Promise<SubmitWordResponse> {
+    async submitWord(gameToken: string, wordRaw: string): Promise<SubmitWordResponse> {
         if (this.isRemoteActive()) {
             try {
                 const response = await fetch(PRODUCTION_API_URL, {
@@ -271,7 +271,7 @@ export class WordleMockBackend {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'submitWord',
-                        id_game: sessionId,
+                        game_token: gameToken,
                         word: wordRaw
                     })
                 });
@@ -283,7 +283,7 @@ export class WordleMockBackend {
 
         await this._delay(500); // Symulacja opóźnienia sieci
 
-        const session = this.db.sessions[sessionId];
+        const session = this.db.sessions[gameToken];
         if (!session || session.state !== 'playing') {
             throw new Error("Invalid session or game already ended.");
         }
@@ -347,14 +347,14 @@ export class WordleMockBackend {
         };
 
         if (gameState.includes('pending_ad')) {
-            response.ad_trigger_url = `/ads/get?game_id=${sessionId}`;
+            response.ad_trigger_url = `/ads/get?game_token=${gameToken}`;
         }
 
         return response;
     }
 
     // [GET] /ads/get
-    async getAd(sessionId: string): Promise<GetAdResponse> {
+    async getAd(gameToken: string): Promise<GetAdResponse> {
         if (this.isRemoteActive()) {
             try {
                 const response = await fetch(PRODUCTION_API_URL, {
@@ -362,7 +362,7 @@ export class WordleMockBackend {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'getAd',
-                        id_game: sessionId
+                        game_token: gameToken
                     })
                 });
                 return await response.json();
@@ -381,7 +381,7 @@ export class WordleMockBackend {
     }
 
     // [POST] /reward/claim
-    async claimReward(sessionId: string, token: string): Promise<ClaimRewardResponse> {
+    async claimReward(gameToken: string, token: string): Promise<ClaimRewardResponse> {
         if (this.isRemoteActive()) {
             try {
                 const response = await fetch(PRODUCTION_API_URL, {
@@ -389,18 +389,18 @@ export class WordleMockBackend {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'claimReward',
-                        id_game: sessionId,
+                        game_token: gameToken,
                         token: token,
                         id_customer: this.idCustomer
                     })
                 });
                 const data = await response.json();
 
-                // Czyszczenie id_game dla wszystkich konfiguracji po odebraniu nagrody, aby nowa gra rozpoczęła się od czystej sesji
+                // Czyszczenie game_token dla wszystkich konfiguracji po odebraniu nagrody, aby nowa gra rozpoczęła się od czystej sesji
                 if (typeof localStorage !== 'undefined') {
                     const keys = Object.keys(localStorage);
                     for (const k of keys) {
-                        if (k.startsWith('yin_wordle_id_game_')) {
+                        if (k.startsWith('yin_wordle_game_token_')) {
                             localStorage.removeItem(k);
                         }
                     }
@@ -413,7 +413,7 @@ export class WordleMockBackend {
         }
 
         await this._delay(600);
-        const session = this.db.sessions[sessionId];
+        const session = this.db.sessions[gameToken];
         if (!session) {
             throw new Error("Session not found");
         }

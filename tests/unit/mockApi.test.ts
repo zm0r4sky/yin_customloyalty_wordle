@@ -20,7 +20,7 @@ describe('WordleMockBackend Unit Tests', () => {
     const session = await backend.startGame('daily');
 
     expect(session.status).toBe('success');
-    expect(session.game_id).toContain('sess_');
+    expect(session.game_token).toContain('sess_');
     expect(session.word_length).toBe(5);
     expect(session.attempts_left).toBe(6);
   });
@@ -41,7 +41,7 @@ describe('WordleMockBackend Unit Tests', () => {
     const game = await backend.startGame('daily');
     
     // EKRAN vs SKLEP -> E(present), K(correct), R(absent), A(absent), N(absent)
-    const res = await backend.submitWord(game.game_id, 'EKRAN');
+    const res = await backend.submitWord(game.game_token, 'EKRAN');
 
     expect(res.status).toBe('success');
     expect(res.game_state).toBe('playing');
@@ -60,7 +60,7 @@ describe('WordleMockBackend Unit Tests', () => {
     backend.dailyWord = "SKLEP";
     const game = await backend.startGame('daily');
     
-    const result = await backend.submitWord(game.game_id, 'SKLEP');
+    const result = await backend.submitWord(game.game_token, 'SKLEP');
 
     expect(result.status).toBe('success');
     expect(result.game_state).toBe('won_pending_ad');
@@ -75,10 +75,10 @@ describe('WordleMockBackend Unit Tests', () => {
     
     // Fail 5 times
     for (let i = 0; i < 5; i++) {
-      await backend.submitWord(game.game_id, 'EKRAN');
+      await backend.submitWord(game.game_token, 'EKRAN');
     }
     // Submit 6th incorrect attempt
-    const result = await backend.submitWord(game.game_id, 'KABEL');
+    const result = await backend.submitWord(game.game_token, 'KABEL');
 
     expect(result.game_state).toBe('lost_pending_ad');
     expect(result.attempts_left).toBe(0);
@@ -90,10 +90,10 @@ describe('WordleMockBackend Unit Tests', () => {
     backend.dailyWord = "SKLEP";
     
     const game = await backend.startGame('daily');
-    await backend.submitWord(game.game_id, 'SKLEP'); // win on 1st attempt
+    await backend.submitWord(game.game_token, 'SKLEP'); // win on 1st attempt
     
-    const ad = await backend.getAd(game.game_id);
-    const claim = await backend.claimReward(game.game_id, ad.verification_token);
+    const ad = await backend.getAd(game.game_token);
+    const claim = await backend.claimReward(game.game_token, ad.verification_token);
     const stats = await backend.getUserStats();
     
     // Score on 1st attempt: 100 base points, streak incremented to 1
@@ -110,18 +110,18 @@ describe('WordleMockBackend Unit Tests', () => {
     backend.dailyWord = "SKLEP";
     
     const game = await backend.startGame('daily');
-    await backend.submitWord(game.game_id, 'SKLEP');
+    await backend.submitWord(game.game_token, 'SKLEP');
     
-    const ad = await backend.getAd(game.game_id);
+    const ad = await backend.getAd(game.game_token);
     const token = ad.verification_token;
     
     // First claim - should succeed
-    const firstClaim = await backend.claimReward(game.game_id, token);
+    const firstClaim = await backend.claimReward(game.game_token, token);
     expect(firstClaim.status).toBe('success');
     expect(firstClaim.game_state).toBe('completed_rewarded');
     
     // Second claim - should throw an error or reject the promise
-    await expect(backend.claimReward(game.game_id, token)).rejects.toThrow('Reward already claimed or session finished');
+    await expect(backend.claimReward(game.game_token, token)).rejects.toThrow('Reward already claimed or session finished');
   });
 
   test('should initialize game with different custom word lengths in free play', async () => {

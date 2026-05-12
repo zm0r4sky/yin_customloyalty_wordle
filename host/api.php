@@ -162,15 +162,40 @@ function handleStartGame($db, $input) {
     $preferredLength = intval($input['length'] ?? 5);
     $idCustomer = intval($input['id_customer'] ?? 0);
     $idPlayerClient = intval($input['id_player'] ?? 0);
-    $idGame = $input['id_game'] ?? '';
+    $gameToken = $input['game_token'] ?? '';
 
     // Pobieramy lub tworzymy unikalny identyfikator gracza
     $idPlayer = getOrCreatePlayer($db, $idPlayerClient, $idCustomer);
 
-    // A. Wznowienie istniejącej sesji (State Recovery na przeładowanie strony)
-    if (!empty($idGame)) {
-        $stmt = $db->prepare("SELECT * FROM `ps_bn_yin_customloyalty_wordle_sessions` WHERE `id_game` = ? LIMIT 1");
-        $stmt->execute([$idGame]);
+    // Jeśli gracz nie podał tokenu w zapytaniu (np. wyczyścił cache), sprawdzamy czy ma aktywną, niedokończoną grę w bazie danych
+    if (empty($gameToken) && $idPlayer > 0) {
+        if ($gameType === 'daily') {
+            // Tryb Codzienny: wznawiamy aktywną grę tylko wtedy, gdy została rozpoczęta DZISIAJ
+            $stmtActive = $db->prepare("SELECT `game_token` FROM `ps_bn_yin_customloyalty_wordle_games` 
+                WHERE `id_player` = ? AND `game_type` = 'daily' AND `game_state` = 'playing' AND DATE(`date_add`) = CURRENT_DATE() 
+                LIMIT 1");
+            $stmtActive->execute([$idPlayer]);
+            $dbActiveToken = $stmtActive->fetchColumn();
+            if ($dbActiveToken) {
+                $gameToken = $dbActiveToken;
+            }
+        } else {
+            // Tryb Free Play: wznawiamy KAŻDĄ aktywną, niedokończoną grę (nawet jeśli rozpoczęto ją wczoraj)
+            $stmtActive = $db->prepare("SELECT `game_token` FROM `ps_bn_yin_customloyalty_wordle_games` 
+                WHERE `id_player` = ? AND `game_type` = 'free' AND `game_state` = 'playing' 
+                LIMIT 1");
+            $stmtActive->execute([$idPlayer]);
+            $dbActiveToken = $stmtActive->fetchColumn();
+            if ($dbActiveToken) {
+                $gameToken = $dbActiveToken;
+            }
+        }
+    }
+
+    // A. Wznowienie istniejącej sesji (State Recovery na przeładowanie strony lub odzyskanie z bazy danych)
+    if (!empty($gameToken)) {
+        $stmt = $db->prepare("SELECT * FROM `ps_bn_yin_customloyalty_wordle_games` WHERE `game_token` = ? LIMIT 1");
+        $stmt->execute([$gameToken]);
         $session = $stmt->fetch();
 
         if ($session) {
@@ -181,14 +206,14 @@ function handleStartGame($db, $input) {
 
             // Generujemy ewaluacje dla każdego wpisanego słowa (bez ujawniania secret word!)
             $evaluatedGuesses = [];
-            $targetWord = strtoupper($session['target_word']);
-            $length = strlen($targetWord);
+            $targetWord = mb_strtoupper($session['target_word'], 'UTF-8');
+            $length = mb_strlen($targetWord, 'UTF-8');
 
             foreach ($guessesDecoded as $gWord) {
-                $gWord = strtoupper($gWord);
+                $gWord = mb_strtoupper($gWord, 'UTF-8');
                 $result = [];
-                $targetChars = str_split($targetWord);
-                $guessChars = str_split($gWord);
+                $targetChars = mb_str_split($targetWord, 1, 'UTF-8');
+                $guessChars = mb_str_split($gWord, 1, 'UTF-8');
 
                 for ($i = 0; $i < $length; $i++) {
                     $result[$i] = ["char" => $guessChars[$i], "status" => null];
@@ -223,7 +248,7 @@ function handleStartGame($db, $input) {
 
             echo json_encode([
                 "status" => "success",
-                "id_game" => $session['id_game'],
+                "game_token" => $session['game_token'],
                 "id_player" => intval($session['id_player']),
                 "length" => $length,
                 "max_attempts" => intval($session['max_attempts']),
@@ -244,12 +269,23 @@ function handleStartGame($db, $input) {
         $targetWord = $stmt->fetchColumn();
 
         if (empty($targetWord)) {
-            // Fallback słowo dnia jeśli baza pusta
-            $targetWord = "SKLEP";
+            // BRAK SŁOWA DNIA: Losujemy jedno aktywne, nie zablokowane słowo 5-literowe ze słownika i zapisujemy jako dzisiejsze słowo dnia!
+            $stmtRand = $db->prepare("SELECT `word` FROM `ps_bn_yin_customloyalty_wordle_dictionary` WHERE `length` = 5 AND `active` = 1 AND `banned` = 0 ORDER BY RAND() LIMIT 1");
+            $stmtRand->execute();
+            $targetWord = $stmtRand->fetchColumn();
+
+            if (!empty($targetWord)) {
+                // Zapisujemy w _daily, aby wszyscy gracze dzisiaj mieli to samo wylosowane słowo!
+                $stmtInsertDaily = $db->prepare("INSERT INTO `ps_bn_yin_customloyalty_wordle_daily` (`scheduled_date`, `word`, `length`) VALUES (CURRENT_DATE(), ?, 5)");
+                $stmtInsertDaily->execute([$targetWord]);
+            } else {
+                // Ostateczny fallback gdyby słownik też był całkowicie pusty
+                $targetWord = "SKLEP";
+            }
         }
     } else {
-        // Tryb Free Play - losujemy słowo o żądanej długości ze słownika
-        $stmt = $db->prepare("SELECT `word` FROM `ps_bn_yin_customloyalty_wordle_dictionary` WHERE `length` = ? AND `is_active` = 1 ORDER BY RAND() LIMIT 1");
+        // Tryb Free Play - losujemy słowo o żądanej długości ze słownika, które jest aktywne i nie zablokowane
+        $stmt = $db->prepare("SELECT `word` FROM `ps_bn_yin_customloyalty_wordle_dictionary` WHERE `length` = ? AND `active` = 1 AND `banned` = 0 ORDER BY RAND() LIMIT 1");
         $stmt->execute([$preferredLength]);
         $targetWord = $stmt->fetchColumn();
 
@@ -263,20 +299,20 @@ function handleStartGame($db, $input) {
         }
     }
 
-    $targetWord = strtoupper($targetWord);
-    $newIdGame = 'game_' . bin2hex(random_bytes(16));
+    $targetWord = mb_strtoupper($targetWord, 'UTF-8');
+    $newGameToken = 'game_' . bin2hex(random_bytes(16));
 
     // C. Zapisz nową sesję w bazie danych
-    $stmt = $db->prepare("INSERT INTO `ps_bn_yin_customloyalty_wordle_sessions` 
-        (`id_game`, `id_player`, `game_type`, `target_word`, `attempts`, `max_attempts`, `guesses`, `game_state`, `date_add`, `date_upd`) 
+    $stmt = $db->prepare("INSERT INTO `ps_bn_yin_customloyalty_wordle_games` 
+        (`game_token`, `id_player`, `game_type`, `target_word`, `attempts`, `max_attempts`, `guesses`, `game_state`, `date_add`, `date_upd`) 
         VALUES (?, ?, ?, ?, 0, 6, '[]', 'playing', NOW(), NOW())");
-    $stmt->execute([$newIdGame, $idPlayer, $gameType, $targetWord]);
+    $stmt->execute([$newGameToken, $idPlayer, $gameType, $targetWord]);
 
     echo json_encode([
         "status" => "success",
-        "id_game" => $newIdGame,
+        "game_token" => $newGameToken,
         "id_player" => $idPlayer,
-        "length" => strlen($targetWord),
+        "length" => mb_strlen($targetWord, 'UTF-8'),
         "max_attempts" => 6,
         "attempts_left" => 6,
         "game_state" => "playing",
@@ -288,19 +324,29 @@ function handleStartGame($db, $input) {
  * Przetwarza i waliduje słowo wpisane przez użytkownika
  */
 function handleSubmitWord($db, $input) {
-    $idGame = $input['id_game'] ?? '';
+    $gameToken = $input['game_token'] ?? '';
     $wordRaw = trim($input['word'] ?? '');
 
-    if (empty($idGame) || empty($wordRaw)) {
+    if (empty($gameToken) || empty($wordRaw)) {
         echo json_encode(["status" => "error", "code" => "MISSING_PARAMS", "message" => "Brak wymaganych parametrów."]);
         return;
     }
 
-    $word = strtoupper($wordRaw);
+    $word = mb_strtoupper($wordRaw, 'UTF-8');
+
+    // 0. Sprawdzenie czy słowo jest na czarnej liście (banned = 1)
+    $stmtCheckBanned = $db->prepare("SELECT `banned` FROM `ps_bn_yin_customloyalty_wordle_dictionary` WHERE `word` = ? LIMIT 1");
+    $stmtCheckBanned->execute([$word]);
+    $bannedStatus = $stmtCheckBanned->fetchColumn();
+
+    if ($bannedStatus !== false && intval($bannedStatus) === 1) {
+        echo json_encode(["status" => "error", "code" => "BANNED_WORD", "message" => "To słowo jest niedozwolone w grze."]);
+        return;
+    }
 
     // A. Pobierz sesję gry
-    $stmt = $db->prepare("SELECT * FROM `ps_bn_yin_customloyalty_wordle_sessions` WHERE `id_game` = ? LIMIT 1");
-    $stmt->execute([$idGame]);
+    $stmt = $db->prepare("SELECT * FROM `ps_bn_yin_customloyalty_wordle_games` WHERE `game_token` = ? LIMIT 1");
+    $stmt->execute([$gameToken]);
     $session = $stmt->fetch();
 
     if (!$session) {
@@ -313,18 +359,18 @@ function handleSubmitWord($db, $input) {
         return;
     }
 
-    $targetWord = strtoupper($session['target_word']);
-    $length = strlen($targetWord);
+    $targetWord = mb_strtoupper($session['target_word'], 'UTF-8');
+    $length = mb_strlen($targetWord, 'UTF-8');
 
-    if (strlen($word) !== $length) {
+    if (mb_strlen($word, 'UTF-8') !== $length) {
         echo json_encode(["status" => "error", "code" => "BAD_WORD_LENGTH", "message" => "Nieprawidłowa długość słowa."]);
         return;
     }
 
     // B. Walidacja liter (porównanie znaków: correct/present/absent)
     $result = [];
-    $targetChars = str_split($targetWord);
-    $guessChars = str_split($word);
+    $targetChars = mb_str_split($targetWord, 1, 'UTF-8');
+    $guessChars = mb_str_split($word, 1, 'UTF-8');
 
     // Inicjalizacja pustych wyników
     for ($i = 0; $i < $length; $i++) {
@@ -372,26 +418,26 @@ function handleSubmitWord($db, $input) {
     }
 
     // D. Zapisz zaktualizowaną sesję w bazie danych
-    $stmt = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_sessions` 
+    $stmt = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_games` 
         SET `attempts` = ?, `guesses` = ?, `game_state` = ?, `date_upd` = NOW() 
-        WHERE `id_game` = ?");
-    $stmt->execute([$newAttempts, json_encode($guesses), $newGameState, $idGame]);
+        WHERE `game_token` = ?");
+    $stmt->execute([$newAttempts, json_encode($guesses), $newGameState, $gameToken]);
 
     // E. SAMOBUDUJĄCY SIĘ SŁOWNIK: Zarejestruj zgłoszenie słowa i zwiększ licznik count_submitted
     // Nowe słowo trafia jako nieaktywne (oczekujące), chyba że przekroczy próg popularności np. 3 zgłoszenia
     $stmtDict = $db->prepare("INSERT INTO `ps_bn_yin_customloyalty_wordle_dictionary` 
-        (`word`, `length`, `count_submitted`, `is_active`) 
-        VALUES (:word, :len, 1, 0) 
+        (`word`, `length`, `count_submitted`, `active`, `banned`) 
+        VALUES (:word, :len, 1, 0, 0) 
         ON DUPLICATE KEY UPDATE `count_submitted` = `count_submitted` + 1");
     $stmtDict->execute([
         ':word' => $word,
-        ':len' => strlen($word)
+        ':len' => mb_strlen($word, 'UTF-8')
     ]);
 
-    // Auto-aktywacja słowa jeśli przekroczyło próg 3 zgłoszeń od graczy
+    // Auto-aktywacja słowa jeśli przekroczyło próg 3 zgłoszeń od graczy i nie jest zablokowane (banned)
     $stmtActivate = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_dictionary` 
-        SET `is_active` = 1 
-        WHERE `word` = ? AND `count_submitted` >= 3 AND `is_active` = 0");
+        SET `active` = 1 
+        WHERE `word` = ? AND `count_submitted` >= 3 AND `active` = 0 AND `banned` = 0");
     $stmtActivate->execute([$word]);
 
     // F. Przygotuj odpowiedź
@@ -403,7 +449,7 @@ function handleSubmitWord($db, $input) {
     ];
 
     if ($newGameState === 'won_pending_ad' || $newGameState === 'lost_pending_ad') {
-        $response["ad_trigger_url"] = "api.php?action=getAd&id_game=" . urlencode($idGame);
+        $response["ad_trigger_url"] = "api.php?action=getAd&game_token=" . urlencode($gameToken);
     }
 
     echo json_encode($response);
@@ -413,18 +459,18 @@ function handleSubmitWord($db, $input) {
  * Zwraca informacje o reklamie sponsorskiej i token weryfikacyjny
  */
 function handleGetAd($db, $input) {
-    $idGame = $input['id_game'] ?? $_GET['id_game'] ?? '';
+    $gameToken = $input['game_token'] ?? $_GET['game_token'] ?? '';
 
-    if (empty($idGame)) {
-        echo json_encode(["status" => "error", "code" => "MISSING_GAME_ID", "message" => "Brak id_game."]);
+    if (empty($gameToken)) {
+        echo json_encode(["status" => "error", "code" => "MISSING_GAME_TOKEN", "message" => "Brak game_token."]);
         return;
     }
 
     $token = 'tok_' . bin2hex(random_bytes(10));
 
     // Zapisz wygenerowany token w sesji, aby zapobiec fałszowaniu ukończenia reklamy
-    $stmt = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_sessions` SET `verification_token` = ? WHERE `id_game` = ?");
-    $stmt->execute([$token, $idGame]);
+    $stmt = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_games` SET `verification_token` = ? WHERE `game_token` = ?");
+    $stmt->execute([$token, $gameToken]);
 
     echo json_encode([
         "ad_id" => "ad_bcs_partner",
@@ -438,17 +484,17 @@ function handleGetAd($db, $input) {
  * Weryfikuje ukończenie reklamy i przyznaje punkty oraz aktualizuje passę (streak)
  */
 function handleClaimReward($db, $input) {
-    $idGame = $input['id_game'] ?? '';
+    $gameToken = $input['game_token'] ?? '';
     $token = $input['token'] ?? '';
 
-    if (empty($idGame) || empty($token)) {
+    if (empty($gameToken) || empty($token)) {
         echo json_encode(["status" => "error", "code" => "MISSING_PARAMS", "message" => "Brak wymaganych parametrów."]);
         return;
     }
 
     // A. Zweryfikuj sesję i token reklamy
-    $stmt = $db->prepare("SELECT * FROM `ps_bn_yin_customloyalty_wordle_sessions` WHERE `id_game` = ? LIMIT 1");
-    $stmt->execute([$idGame]);
+    $stmt = $db->prepare("SELECT * FROM `ps_bn_yin_customloyalty_wordle_games` WHERE `game_token` = ? LIMIT 1");
+    $stmt->execute([$gameToken]);
     $session = $stmt->fetch();
 
     if (!$session) {
@@ -536,10 +582,10 @@ function handleClaimReward($db, $input) {
     ]);
 
     // D. Oznacz sesję jako pomyślnie nagrodzoną / zakończoną
-    $stmtEnd = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_sessions` 
+    $stmtEnd = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_games` 
         SET `game_state` = 'completed_rewarded', `verification_token` = NULL, `date_upd` = NOW() 
-        WHERE `id_game` = ?");
-    $stmtEnd->execute([$idGame]);
+        WHERE `game_token` = ?");
+    $stmtEnd->execute([$gameToken]);
 
     echo json_encode([
         "status" => "success",

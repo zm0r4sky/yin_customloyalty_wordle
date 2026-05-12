@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     // === STAN APLIKACJI ===
-    let gameId = "";
+    let gameToken = "";
     let currentGameType = 'daily';
     let wordLength = parseInt(localStorage.getItem('wordLength') || '5');
     let maxAttempts = 6;
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     function initializeSession(response) {
-        gameId = response.game_id;
+        gameToken = response.game_token;
         wordLength = response.word_length;
         maxAttempts = response.max_attempts || 6;
         buildBoard();
@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         isProcessing = true;
         try {
-            const res = await window.api.submitWord(gameId, currentGuess);
+            const res = await window.api.submitWord(gameToken, currentGuess);
             if (res.status === 'error') {
                 showToast(res.message || "Brak słowa w słowniku");
                 shakeRow();
@@ -460,7 +460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // === SYSTEM REKLAM (AD GATEWAY) ===
     async function triggerAdGateway(gameState) {
-        const adConfig = await window.api.getAd(gameId);
+        const adConfig = await window.api.getAd(gameToken);
         adToken = adConfig.verification_token;
         const adImage = document.getElementById('ad-image');
         if (adImage)
@@ -483,7 +483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     skipAdBtn.addEventListener('click', async () => {
         adModal.style.display = 'none';
-        const result = await window.api.claimReward(gameId, adToken);
+        const result = await window.api.claimReward(gameToken, adToken);
         endModal.style.display = 'flex';
         if (result.game_state === 'completed_rewarded') {
             endTitle.textContent = "Wygrałeś!";
