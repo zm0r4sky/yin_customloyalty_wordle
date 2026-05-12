@@ -24,11 +24,14 @@
         <!-- Toast Notifications -->
         <div id="toast-container"></div>
 
-        <!-- Game Board Grid -->
-        <div id="board" class="board"></div>
+        <!-- Board Section — grows to fill remaining space -->
+        <section class="board-section">
+            <div id="board" class="board"></div>
+        </section>
 
-        <!-- Keyboard -->
-        <div id="keyboard" class="keyboard">
+        <!-- Keyboard Section — always pinned to bottom -->
+        <section class="keyboard-section">
+            <div id="keyboard" class="keyboard">
             <div class="keyboard-row">
                 <button data-key="A">A</button><button data-key="Ą">Ą</button><button data-key="B">B</button>
                 <button data-key="C">C</button><button data-key="Ć">Ć</button><button data-key="D">D</button>
@@ -50,7 +53,8 @@
                 <button data-key="Ż">Ż</button>
                 <button data-key="BACKSPACE" class="wide-key">⌫</button>
             </div>
-        </div>
+            </div>
+        </section>
     </main>
 
     <!-- Ad Overlay Modal -->

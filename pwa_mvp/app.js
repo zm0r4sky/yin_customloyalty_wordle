@@ -79,11 +79,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function buildBoard() {
         board.innerHTML = '';
-        board.style.gridTemplateRows = `repeat(${maxAttempts}, 1fr)`;
+        // Propagate dimensions to CSS custom properties
+        document.documentElement.style.setProperty('--word-length', wordLength);
+        document.documentElement.style.setProperty('--max-attempts', maxAttempts);
         for (let r = 0; r < maxAttempts; r++) {
             const row = document.createElement('div');
             row.className = 'board-row';
-            row.style.gridTemplateColumns = `repeat(${wordLength}, 1fr)`;
             row.id = `row-${r}`;
             for (let c = 0; c < wordLength; c++) {
                 const tile = document.createElement('div');
