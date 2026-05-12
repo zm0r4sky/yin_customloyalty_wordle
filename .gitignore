@@ -1,0 +1,19 @@
+# Zależności NPM (pobrane pakiety)
+node_modules/
+
+# Raporty i wyniki testów Playwright (automatycznie generowane)
+test-results/
+playwright-report/
+blob-report/
+playwright/.local-browsers/
+
+# Pliki tymczasowe i logi błędów npm/yarn
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Pliki systemowe
+.DS_Store
+Thumbs.db
+Desktop.ini

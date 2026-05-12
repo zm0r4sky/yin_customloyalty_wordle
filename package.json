@@ -1,0 +1,16 @@
+{
+  "name": "yin-customloyalty-wordle",
+  "version": "1.0.0",
+  "description": "YIN Wordle PWA with Playwright Unit and E2E Tests",
+  "main": "pwa_mvp/app.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "serve": "npx http-server ./pwa_mvp -p 8080"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.43.0",
+    "http-server": "^14.1.1"
+  }
+}
