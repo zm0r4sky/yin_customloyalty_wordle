@@ -1,165 +1,3 @@
-# SZABLON DOKUMENTACJI PREMIUM (MASTER README BLUEPRINT)
-> **Oficjalny, ujednolicony standard dokumentacji technicznej i biznesowej dla modułów PrestaShop autorstwa Mariusza Opacha. Niniejszy plik służy jako wzorzec (blueprint) oraz zawiera instrukcję tworzenia spójnych plików README.**
-
----
-
-[![PrestaShop Version](https://img.shields.io/badge/PrestaShop-1.7.x%20--%208.x-df0067?style=for-the-badge&logo=prestashop)](https://www.prestashop.com/)
-[![License](https://img.shields.io/badge/Licencja-Proprietary-blue?style=for-the-badge)](https://en.wikipedia.org/wiki/Proprietary_software)
-[![PHP](https://img.shields.io/badge/PHP-%3E%3D%207.2-777bb4?style=for-the-badge&logo=php)](https://www.php.net/)
-
----
-
-## 🗂️ INSTRUKCJA: Struktura Nagłówków i Podpisów (Signatures)
-
-Każdy nowo tworzony lub aktualizowany plik `README.md` w ekosystemie modułów musi rozpoczynać się od ujednoliconego podpisu projektowego. Zapobiega to rozbieżnościom i od razu pozycjonuje kod jako produkt klasy premium.
-
-### 1. Budowa podpisu początkowego
-Podpis składa się z czterech sekcji:
-1.  **Tytuł Główny (`#`)**: Nazwa modułu w wersji czytelnej dla człowieka (np. `YIN Custom Loyalty Wordle`) oraz po myślniku zwięzły podtytuł biznesowy (np. `Gamifikacja programu lojalnościowego`).
-2.  **Opis Wyróżniony (`> **...**`)**: Dokładne jedno lub dwuzdaniowe wyjaśnienie roli techniczno-biznesowej modułu w systemie, napisane pogrubioną czcionką wewnątrz bloku cytatu.
-3.  **Linia oddzielająca (`---`)**: Pozioma kreska oddzielająca wprowadzenie od reszty dokumentu.
-4.  **Tarcze statusu (Badges)**: Zestaw trzech kolorowych tarcz graficznych informujących o kompatybilnej wersji PrestaShop, typie licencji oraz minimalnej wersji PHP.
-
-#### Szablon Kodu Podpisu (Skopiuj i uzupełnij):
-```markdown
-# [NAZWA MODUŁU] - [PODTYTUŁ BIZNESOWY]
-> **[JEDNO/DWUZDANIOWY POGRUBIONY OPIS ROLI MODUŁU I JEGO GŁÓWNYCH KORZYŚCI BIZNESOWYCH]**
-
----
-
-[![PrestaShop Version](https://img.shields.io/badge/PrestaShop-[WERSJE_PRESTASHOP]-df0067?style=for-the-badge&logo=prestashop)](https://www.prestashop.com/)
-[![License](https://img.shields.io/badge/Licencja-[LICENCJA]-blue?style=for-the-badge)](https://en.wikipedia.org/wiki/Proprietary_software)
-[![PHP](https://img.shields.io/badge/PHP-%3E%3D%20[WERSJA_PHP]-777bb4?style=for-the-badge&logo=php)](https://www.php.net/)
-```
-
-### 2. Casing pliku (Wielkość liter w nazwie na systemach Windows)
-> [!IMPORTANT]
-> **Ze względu na brak rozróżniania wielkości liter (case-insensitivity) w systemach Windows, zawsze najpierw sprawdź rzeczywistą wielkość liter istniejącego pliku za pomocą listy plików w folderze!**
-> *   Jeśli plik na dysku nazywa się już `Readme.md` (z małą literą "d" i "m"), musisz pisać i zapisywać bezpośrednio do `Readme.md`.
-> *   Jeśli plik na dysku nazywa się `README.md` (wielkie litery), musisz pisać do `README.md`.
-> *   Próba zapisu do innej wielkości liter bez uprzedniego czyszczenia bufora może spowodować doklejenie pozostałości starego pliku na samym dole nowego dokumentu!
-
----
-
-## 📐 UNIWERSALNY SZABLON STRUKTURY PLIKU
-
-Poniżej znajduje się kompletny, ustrukturyzowany spis sekcji, które **muszą** znaleźć się w każdym pliku dokumentacji modułu.
-
-### Sekcja I: 📖 O projekcie
-Wyczerpujący opis biznesowy i funkcjonalny modułu. Opisujemy tutaj:
-*   Dla kogo jest przeznaczony (B2B / B2C).
-*   Jaki problem rozwiązuje i jakie korzyści przynosi właścicielowi sklepu.
-*   Główny pomysł stojący za jego działaniem.
-
----
-
-### Sekcja II: ✨ Główne cechy i funkcjonalności
-Podział cech technicznych na mniejsze, czytelne bloki z użyciem pogrubionych słów kluczowych.
-*   **[Nazwa Funkcji I]**: Opis techniczny, np. "Integracja w locie", "Walidacja sumy kontrolnej NIP".
-*   **[Nazwa Funkcji II]**: Opis bezpieczeństwa, np. "Autoryzacja tokenem HMAC-SHA256".
-
----
-
-### Sekcja III: 🏗️ Architektura i Przepływ danych (Diagramy Mermaid)
-Każdy moduł musi posiadać graficzny diagram sekwencji lub przepływu danych wykonany w formacie **Mermaid**, obrazujący drogę od interakcji klienta do zapisu/odczytu w bazie danych i integracji zewnętrznych:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Uzytkownik as Klient / Administrator
-    participant Kontroler as Kontroler PHP (Action/Front)
-    participant DB as Baza Danych (PrestaShop)
-
-    Uzytkownik->>Kontroler: Akcja / Wywołanie żądania
-    Kontroler->>DB: Odpytanie/Zapis z filtrowaniem pSQL()
-    DB-->>Kontroler: Zwrócenie ustrukturyzowanych danych
-    Kontroler-->>Uzytkownik: Wyrenderowanie widoku Smarty (.tpl) z filtrem escape
-```
-
----
-
-### Sekcja IV: 🏗️ Struktura bazy danych (Tabele bazodanowe)
-Prezentacja struktur bazy danych w formie tabeli Markdown. Każda tabela tworzona przez moduł musi zostać szczegółowo rozpisana:
-
-#### Tabela: `ps_bn_nazwa_tabeli`
-| Kolumna | Typ | Indeks | Opis działania i rola w systemie |
-| :--- | :---: | :---: | :--- |
-| `id_customer` | INT(11) | Primary Key | ID klienta powiązane z główną tabelą `ps_bn_customer`. |
-| `token` | VARCHAR(64) | Unique Key | Kryptograficzny token dostępowy. |
-| `date_add` | DATETIME | - | Data i czas utworzenia wpisu. |
-
----
-
-### Sekcja V: 📂 Struktura katalogów i kontrolerów
-Kompletne drzewo plików modułu (z wykluczeniem folderów roboczych `.git`, `.idea` itp.). Każdy kluczowy kontroler, klasa pomocnicza (helper) oraz szablon `.tpl` musi posiadać zwięzły opis swojej roli w komentarzu po znaku `#`:
-
-```bash
-nazwa_modulu/
-├── classes/
-│   └── NazwaHelper.php        # Główna klasa pomocnicza (np. walidacje, połączenia API)
-├── controllers/
-│   ├── admin/                 # Kontrolery panelu administracyjnego (Back Office)
-│   │   └── AdminNazwaController.php
-│   └── front/                 # Kontrolery widoku użytkownika (Front Office)
-│       └── display.php
-├── sql/
-│   ├── install.php            # Skrypt tworzenia tabel bazodanowych przy instalacji
-│   └── uninstall.php          # Skrypt usuwania tabel przy deinstalacji
-├── views/
-│   ├── css/                   # Arkusze stylów (back.css, front.css)
-│   ├── js/                    # Skrypty JS i AJAX
-│   └── templates/
-│       ├── admin/             # Szablony paneli administracyjnych BO
-│       ├── front/             # Szablony widoków klienta FO
-│       └── hook/              # Szablony osadzania w hookach systemu PrestaShop
-├── index.php                  # Zabezpieczenie przed bezpośrednim listowaniem katalogu
-└── nazwa_modulu.php           # Główny plik rejestrujący moduł, instalujący menu i hooki
-```
-
----
-
-### Sekcja VI: 🔒 Bezpieczeństwo i Optymalizacja kodu
-Szczegółowy opis zabezpieczeń wdrożonych w kodzie modułu:
-1.  **Odporność na SQL Injection**: Zastosowanie barier ochronnych (rzutowanie typów liczbowych, użycie metody `pSQL()`).
-2.  **Ochrona przed podatnościami XSS**: Escapowanie zmiennych wejściowych w szablonach `.tpl` za pomocą filtrów Smarty (`escape:'html':'UTF-8'`).
-3.  **Wydajność zapytań (Performance)**: Zastosowanie indeksów bazodanowych na unikalnych kluczach oraz buforowanie operacji w pamięci podręcznej (Cache).
-
----
-
-### Sekcja VII: 🚀 Instalacja i Pierwsze Uruchomienie
-Instrukcja opisująca krok po kroku wdrożenie modułu w systemie PrestaShop:
-1.  Sposób pakowania do formatu `.zip`.
-2.  Procedura wgrywania przez panel Menedżera Modułów.
-3.  Wymagane kroki poinstalacyjne (np. konfiguracja zadań CRON na serwerze).
-
-> [!TIP]
-> **Wskazówki konfiguracyjne** ułatwiające administratorom codzienne korzystanie z modułu i optymalizację jego parametrów.
-
----
-
-### Sekcja VIII: 📝 Warunki Licencyjne i Prawa Autorskie
-Wbudowany blok chroniący własność intelektualną i prawa autorskie Mariusza Opacha:
-
-> [!WARNING]
-> **Moduł objęty jest ścisłą licencją komercyjną (Custom Proprietary License).**
-
-Wszystkie prawa do kodu źródłowego, grafik, logiki oraz dokumentacji są zastrzeżone na rzecz autora:
-*   **Autor**: Mariusz Opach
-*   **Copyright**: © 2026 Mariusz Opach. Wszelkie prawa zastrzeżone.
-
-Bez uprzedniej, pisemnej zgody autora zabrania się:
-*   Kopiowania, dystrybucji lub modyfikacji kodu w celach innych niż użytkowanie na licencjonowanej domenie.
-*   Odsprzedaży lub udostępniania osobom trzecim.
-*   Dekompilacji lub inżynierii wstecznej modułu.
-
-*Naruszenie warunków licencji będzie skutkować natychmiastowym podjęciem kroków prawnych.*
-
----
-
-## 🎮 PRZYKŁAD WDROŻENIA: Moduł `yin_customloyalty_wordle`
-
-*Poniżej znajduje się wzorcowe zastosowanie powyższego szablonu dla aktualnego modułu gamifikacji Wordle.*
-
 # YIN Custom Loyalty Wordle - Wordle Gamification
 > **Moduł gamifikacyjny dla programu lojalnościowego PrestaShop, angażujący klientów poprzez codzienną minigrę słowną Wordle i nagradzający ich punktami lojalnościowymi za odgadnięcie słowa dnia.**
 
@@ -169,32 +7,162 @@ Bez uprzedniej, pisemnej zgody autora zabrania się:
 [![License](https://img.shields.io/badge/Licencja-Proprietary-blue?style=for-the-badge)](https://en.wikipedia.org/wiki/Proprietary_software)
 [![PHP](https://img.shields.io/badge/PHP-%3E%3D%207.2-777bb4?style=for-the-badge&logo=php)](https://www.php.net/)
 
+---
+
 ## 📖 O projekcie
 
-**YIN Custom Loyalty Wordle** to innowacyjny moduł rozszerzający funkcjonalność systemu lojalnościowego `yin_customloyalty`. Wprowadza on do sklepu internetowego elementy grywalizacji (Gamification) poprzez popularną grę słowną **Wordle**. 
+**YIN Custom Loyalty Wordle** to zaawansowany moduł rozszerzający funkcjonalność systemu lojalnościowego `yin_customloyalty`. Wprowadza on do e-sklepu mechanizmy grywalizacji (Gamification) poprzez popularną na całym świecie grę słowną **Wordle**.
 
-Zasada działania jest prosta i niezwykle angażująca: raz na dobę klient sklepu ma możliwość podjęcia próby odgadnięcia ukrytego, 5-literowego słowa kluczowego (powiązanego z asortymentem sklepu lub branżą zabezpieczeń). Za pomyślne odgadnięcie słowa w określonej liczbie prób, portfel lojalnościowy klienta jest automatycznie zasilany zdefiniowaną liczbą punktów lojalnościowych. Moduł buduje silny nawyk codziennego odwiedzania sklepu przez klientów (Retention Rate), co bezpośrednio przekłada się na wyższe statystyki sprzedaży i lojalność wobec marki.
+Zasada działania jest niezwykle angażująca dla klienta: raz na dobę ma on możliwość odgadnięcia ukrytego, 5-literowego słowa klucza (powiązanego z asortymentem sklepu lub powiązaną branżą). Za pomyślne rozwiązanie zagadki w maksymalnie 6 próbach, portfel lojalnościowy gracza zostaje zasilony punktami. Taki mechanizm buduje nawyk codziennego odwiedzania sklepu (Retention Rate) oraz bezpośrednio wspiera lojalność wobec marki.
+
+### 🗺️ Gdzie jesteśmy i dokąd zmierzamy?
+Jesteśmy na **początku drogi tego projektu**. 
+* **Etap Obecny (PWA MVP):** Aplikacja działa jako wysoce zoptymalizowana, responsywna aplikacja progresywna (PWA) napisana w **TypeScript**, z silnikiem gry emulowanym po stronie klienta (`localStorage`).
+* **Etap Docelowy (Integracja PrestaShop 8):** PWA zostanie wbudowane w natywny moduł PrestaShop 8. Silnik gry (Source of Truth) zostanie przeniesiony na backend PHP, a punkty będą przyznawane w zabezpieczony kryptograficznie sposób bezpośrednio w bazie danych systemu `yin_customloyalty`.
+
+---
 
 ## ✨ Główne cechy i funkcjonalności
 
-*   **Mechanika gry Wordle**: Klasyczny silnik gry słownej (6 prób na odgadnięcie 5-literowego słowa dnia, z graficznym oznaczaniem liter: kolor zielony - właściwa litera na właściwym miejscu, żółty - właściwa litera na złym miejscu, szary - litera nie występuje w słowie).
-*   **Integracja z portfelem lojalnościowym**: Bezpośrednie, bezpieczne połączenie z modułem `yin_customloyalty`. Po wygranej system automatycznie dopisuje punkty do portfela klienta, rejestrując zdarzenie w historii operacji.
-*   **Blokada jedno-razowa (Daily Limit)**: System pozwala na rozegranie tylko jednej pełnej gry dziennie dla zalogowanego konta klienta, zapobiegając nadużyciom i wielokrotnemu nabijaniu punktów.
-*   **Zarządzanie bazą słów (Dictionary)**: Słownik haseł na każdy dzień roku konfigurowany i przechowywany bezpiecznie w bazie danych sklepu, z możliwością zarządzania z poziomu Back Office.
+*   **Mechanika gry Wordle:** Klasyczny silnik gry (6 prób, oznaczanie liter kolorami: zielony - correct, żółty - present, szary - absent) w pełnej polskiej lokalizacji językowej (`PL`).
+*   **Mobilny i Responsywny Layout:** Siatka gry zbudowana przy użyciu modern CSS oraz **Container Queries**. Gwarantuje to idealnie kwadratowe, samopozycjonujące się kafelki i optymalny układ klawiatury na każdym telefonie (np. iPhone 12 Pro) bez ucinania widoku.
+*   **Wielofunkcyjna Klawiatura:** Przyklejona do dołu ekranu wirtualna klawiatura z dużymi, dotykowymi przyciskami (w tym czytelnymi *ENTER* i *BACKSPACE*) oraz pełna integracja z fizyczną klawiaturą komputerową (`keydown`).
+*   **Brama Reklamowa (Ad Gateway):** Blokuje ekran po zakończeniu gry. Użytkownik musi odczekać licznik czasu reklamy sponsorowanej, aby uzyskać token weryfikacyjny odblokowujący przycisk odebrania punktów lojalnościowych.
+*   **Obsługa Offline:** Dzięki PWA (Service Worker `sw.js` oraz Web App Manifest) gra ładuje się i informuje o stanie połączenia specjalnym paskiem ostrzegawczym nawet przy całkowitym braku internetu.
 
-## 🏗️ Architektura bazy danych
+---
 
-#### Tabela: `ps_bn_yin_customloyalty_wordle_words`
-Słownik haseł dobowych przypisanych do konkretnych dni roku kalendarzowego.
-*   `id_word` (INT, Primary Key)
-*   `word` (VARCHAR(5), Ukryte słowo 5-literowe)
-*   `date_active` (DATE, Dzień, w którym hasło jest aktywne w grze)
+## 🏗️ Architektura i Przepływ danych
 
-#### Tabela: `ps_bn_yin_customloyalty_wordle_history`
-Historia rozgrywek i statusów uczestnictwa klientów w celu blokady duplikatów gier.
-*   `id_history` (INT, Primary Key)
-*   `id_customer` (INT, ID klienta)
-*   `date_played` (DATE, Data rozegrania gry)
-*   `attempts` (INT, Liczba zużytych prób)
-*   `won` (TINYINT, Status zwycięstwa: `0` = przegrana, `1` = wygrana)
-*   `points_rewarded` (FLOAT, Przyznana nagroda punktowa)
+### Przepływ gry (Stan obecny - PWA)
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Użytkownik / Gracz
+    participant UI as Interfejs PWA (src/app.ts)
+    participant E as Silnik Gry (src/mockApi.ts)
+    participant LS as LocalStorage (Browser Cache)
+
+    U->>UI: Otwiera grę w przeglądarce
+    UI->>E: startGame('daily')
+    E->>LS: Pobierz stan sesji i historię
+    LS-->>E: Zwrócenie stanu zapisu
+    E-->>UI: Rozpoczęcie rundy (attempts_left, status)
+    
+    U->>UI: Wpisuje słowo i klika ENTER
+    UI->>E: submitWord(game_id, word)
+    Note over E: Walidacja liter (correct/present/absent)
+    E->>LS: Zapisz stan próby
+    E-->>UI: Zwrócenie wyników kolorów liter i stanu (playing/won_pending_ad/lost_pending_ad)
+```
+
+---
+
+## 🗄️ Struktura Katalogów Projektu
+
+```text
+yin_customloyalty_wordle/
+├── src/                          # Kod źródłowy TypeScript (Source of Truth!)
+│   ├── app.ts                    # UI controller, obsługa DOM, zdarzenia, klawiatura, powiadomienia
+│   └── mockApi.ts                # Silnik gry, dictionary, system punktacji, ad-gateway, stany sesji
+├── pwa_mvp/                      # Skompilowane pliki produkcyjne (Serwowane do przeglądarki!)
+│   ├── app.js                    # Skompilowany kontroler UI
+│   ├── mockApi.js                # Skompilowany silnik gry
+│   ├── index.html                # Punkt wejścia aplikacji
+│   ├── style.css                 # Główne, responsywne arkusze stylów
+│   ├── manifest.json             # Konfiguracja instalacji PWA
+│   └── sw.js                     # PWA Service Worker (Zapis offline)
+├── tests/                        # Kompleksowy pakiet testów automatycznych
+│   ├── unit/                     # Testy jednostkowe logiki silnika
+│   │   └── mockApi.test.ts       # Testy Vitest (Happy DOM) dla WordleMockBackend
+│   └── e2e/                      # Testy integracyjne i interfejsu (End-to-End)
+│       └── wordle.spec.ts        # Testy Playwright (interakcje, brama reklamowa, offline)
+├── .github/workflows/            # Konfiguracja CI/CD
+│   └── test.yml                  # Potok testowy uruchamiający testy w chmurze przy pushu
+├── tsconfig.json                 # Konfiguracja kompilatora TypeScript
+├── vitest.config.ts              # Konfiguracja środowiska testów jednostkowych Vitest
+└── playwright.config.js          # Konfiguracja przeglądarek testowych Playwright
+```
+
+---
+
+## ⚙️ Jak uruchomić i testować lokalnie?
+
+Lokalny serwer to pierwsze i najważniejsze miejsce testowania gry przed wypchnięciem zmian na produkcję.
+
+### 1. Instalacja zależności deweloperskich
+```powershell
+# Uruchom w CMD lub PowerShell w katalogu projektu:
+cmd /c "npm install"
+```
+
+### 2. Kompilacja TypeScriptu do JavaScriptu
+Przeglądarka uruchamia pliki `.js` z folderu `pwa_mvp`. Po modyfikacji jakichkolwiek plików w `src/` (TypeScript), musisz je skompilować:
+```powershell
+cmd /c "npm run build"
+```
+
+### 3. Uruchomienie lokalnego serwera
+```powershell
+cmd /c "npm run serve"
+```
+Aplikacja zostanie uruchomiona lokalnie. Otwórz w przeglądarce adres:
+👉 **[http://127.0.0.1:8080](http://127.0.0.1:8080)**
+
+---
+
+## 🧪 Automatyczne Testy (Unit & E2E)
+
+Projekt posiada w pełni skonfigurowane, automatyczne środowisko testowe.
+
+### Uruchomienie testów jednostkowych (Vitest)
+Testują logikę punktacji, limitów prób, verify tokenów reklamowych w odizolowanym środowisku Happy DOM:
+```powershell
+cmd /c "npm run test:unit"
+```
+
+### Uruchomienie testów E2E (Playwright)
+Otwierają bezgłową (headless) instancję przeglądarki Chromium, symulują kliknięcia wirtualnej klawiatury, odliczanie reklamy oraz reakcję na brak sieci:
+```powershell
+cmd /c "npm run test:e2e"
+```
+
+### Ciągła Integracja (GitHub Actions)
+Każdy push do gałęzi `main` uruchamia potok testowy na GitHubie. Wdrożyliśmy zaawansowane mechanizmy **cachowania**:
+*   **Cache Node Modules (`cache: npm`)** – drastycznie skraca czas instalacji zależności.
+*   **Cache Playwright Browsers (`~/.cache/ms-playwright`)** – zapobiega ponownemu pobieraniu przeglądarek przy każdym uruchomieniu, oszczędzając ponad 60-80% czasu trwania budowania w chmurze.
+
+---
+
+## 🔮 Przyszły plan rozwoju (Integracja PrestaShop 8)
+
+Gdy przejdziemy do fazy pełnej integracji z ekosystemem modułów PrestaShop 8, zrealizujemy następujące kroki:
+
+1.  **Przeniesienie walidacji słowa na backend (Zabezpieczenie przed cheatowaniem):**
+    *   Wpisane przez użytkownika słowo będzie wysyłane żądaniem AJAX do kontrolera frontowego modułu PrestaShop.
+    *   Baza danych PrestaShop zweryfikuje, czy słowo jest poprawne i zwróci tablicę z wynikami kolorów liter. Słowo dnia nigdy nie zostanie wysłane do przeglądarki użytkownika przed ukończeniem rozgrywki.
+2.  **Integracja bazodanowa:**
+    *   **Tabela `ps_bn_yin_customloyalty_wordle_words`** będzie przechowywać słowa dnia ustawiane przez administratora w panelu Back-Office.
+    *   **Tabela `ps_bn_yin_customloyalty_wordle_history`** będzie zabezpieczać przed ponownym rozegraniem gry tego samego dnia przez zalogowanego klienta.
+3.  **Podpis kryptograficzny nagrody:**
+    *   Brama reklamowa wywoła endpoint backendu, który po weryfikacji obejrzenia reklamy wygeneruje unikalny token podpisany kluczem zabezpieczającym (HMAC-SHA256).
+    *   Token ten będzie wymagany do zgłoszenia wygranej w module lojalnościowym, co uniemożliwi sztuczne nabijanie punktów z poziomu konsoli JS.
+4.  **Panel Zarządzania (Back-Office):**
+    *   Możliwość definiowania nagród punktowych (punkty bazowe, bonus za szybkie odgadnięcie, bonus za serię/streak).
+    *   Kalendarz słów dnia ułatwiający planowanie haseł na cały rok.
+
+---
+
+## 📝 Warunki Licencyjne i Prawa Autorskie
+
+> [!WARNING]
+> **Moduł objęty jest ścisłą licencją komercyjną (Custom Proprietary License).**
+
+Wszystkie prawa do kodu źródłowego, grafik, logiki oraz dokumentacji są zastrzeżone na rzecz autora:
+*   **Autor:** Mariusz Opach
+*   **Copyright:** © 2026 Mariusz Opach. Wszelkie prawa zastrzeżone.
+
+Bez uprzedniej, pisemnej zgody autora zabrania się:
+*   Kopiowania, dystrybucji lub modyfikacji kodu w celach innych niż użytkowanie na licencjonowanej domenie.
+*   Odsprzedaży lub udostępniania osobom trzecim.
+*   Dekompilacji lub inżynierii wstecznej modułu.
