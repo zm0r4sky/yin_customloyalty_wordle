@@ -464,18 +464,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (streakDisplay)
             streakDisplay.textContent = `🔥 ${stats.streak}`;
     });
+    // === POMOCNICZE OBSŁUGI KLAWIATURY PO ZAKOŃCZENIU GRY ===
+    function showPlayAgainKeyboardCTA() {
+        const keyboardElem = document.getElementById('keyboard');
+        const keyboardBtn = document.getElementById('keyboard-play-again-btn');
+        if (keyboardElem && keyboardBtn) {
+            keyboardElem.style.display = 'none';
+            keyboardBtn.style.display = 'block';
+        }
+    }
+    function hidePlayAgainKeyboardCTA() {
+        const keyboardElem = document.getElementById('keyboard');
+        const keyboardBtn = document.getElementById('keyboard-play-again-btn');
+        if (keyboardElem && keyboardBtn) {
+            keyboardElem.style.display = '';
+            keyboardBtn.style.display = 'none';
+        }
+    }
     closeEndBtn.addEventListener('click', () => {
         endModal.style.display = 'none';
+        showPlayAgainKeyboardCTA();
         showToast("Zakończono. Możesz zagrać w Free Play.");
     });
     playAgainBtn.addEventListener('click', async () => {
         endModal.style.display = 'none';
         await resetGame('free');
     });
+    const keyboardPlayAgainBtn = document.getElementById('keyboard-play-again-btn');
+    if (keyboardPlayAgainBtn) {
+        keyboardPlayAgainBtn.addEventListener('click', async () => {
+            await resetGame('free');
+        });
+    }
     async function resetGame(type) {
         board.innerHTML = '';
         keyColors = {};
         currentGameType = type;
+        hidePlayAgainKeyboardCTA();
         buildKeyboard();
         currentRow = 0;
         currentTile = 0;
