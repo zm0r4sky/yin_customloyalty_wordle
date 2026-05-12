@@ -2,11 +2,67 @@
  * Mock API - Symulacja Backend PHP dla YIN Wordle PWA
  * Source of Truth (Wszystkie walidacje odbywają się tutaj)
  */
+
+export interface WordleSession {
+    type: string;
+    attempts: string[];
+    state: 'playing' | 'won_pending_ad' | 'lost_pending_ad' | 'completed' | 'completed_rewarded' | 'completed_failed';
+    started_at: number;
+}
+
+export interface WordleUser {
+    points: number;
+    streak: number;
+}
+
+export interface WordleDb {
+    sessions: Record<string, WordleSession>;
+    user: WordleUser;
+}
+
+export interface SubmitWordResult {
+    char: string;
+    status: 'correct' | 'present' | 'absent' | null;
+}
+
+export interface StartGameResponse {
+    status: 'success';
+    game_id: string;
+    word_length: number;
+    attempts_left: number;
+}
+
+export interface SubmitWordResponse {
+    status: 'success' | 'error';
+    game_state?: 'playing' | 'won_pending_ad' | 'lost_pending_ad';
+    result?: SubmitWordResult[];
+    attempts_left?: number;
+    ad_trigger_url?: string;
+    code?: string;
+    message?: string;
+}
+
+export interface GetAdResponse {
+    ad_id: string;
+    banner_url: string;
+    duration_seconds: number;
+    verification_token: string;
+}
+
+export interface ClaimRewardResponse {
+    status: 'success';
+    game_state: string;
+    points_earned: number;
+    new_streak: number;
+    streak_bonus_applied: string;
+}
+
 export class WordleMockBackend {
-    dailyWord;
-    dictionary;
-    maxAttempts;
-    db;
+    public dailyWord: string;
+    public dictionary: string[];
+    public maxAttempts: number;
+    public db: WordleDb;
+
     constructor() {
         this.dailyWord = "SKLEP"; // Słowo Dnia (Hardcoded dla MVP)
         // Duży słownik testowy (wyłącznie zweryfikowane polskie słowa 5-literowe)
@@ -22,6 +78,7 @@ export class WordleMockBackend {
             "OFERT", "ZAKUP", "MARŻA", "KONTO", "WALUT", "PALIW", "MOTOR", "KROKI", "WYNIK"
         ];
         this.maxAttempts = 6;
+        
         // Symulowana baza danych w LocalStorage
         let stored = null;
         if (typeof localStorage !== 'undefined') {
@@ -32,27 +89,32 @@ export class WordleMockBackend {
             user: { points: 0, streak: 0 }
         };
     }
-    _saveDb() {
+
+    public _saveDb(): void {
         if (typeof localStorage !== 'undefined') {
             localStorage.setItem('yin_wordle_db', JSON.stringify(this.db));
         }
     }
-    _delay(ms) {
+
+    public _delay(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-    _normalize(word) {
+
+    public _normalize(word: string): string {
         return word.toUpperCase();
     }
+
     // [POST] /game/start
-    async startGame(type = 'daily') {
+    async startGame(type: 'daily' | 'free' = 'daily'): Promise<StartGameResponse> {
         await this._delay(300); // Symulacja opóźnienia sieci
+        
         if (type === 'free') {
             const randIndex = Math.floor(Math.random() * this.dictionary.length);
             this.dailyWord = this.dictionary[randIndex];
-        }
-        else {
+        } else {
             this.dailyWord = "SKLEP"; // Hardcoded for daily MVP
         }
+
         const sessionId = 'sess_' + Math.random().toString(36).substring(2, 11);
         this.db.sessions[sessionId] = {
             type: type,
@@ -61,6 +123,7 @@ export class WordleMockBackend {
             started_at: Date.now()
         };
         this._saveDb();
+
         return {
             status: "success",
             game_id: sessionId,
@@ -68,34 +131,40 @@ export class WordleMockBackend {
             attempts_left: this.maxAttempts
         };
     }
+
     // [POST] /game/submit-word
-    async submitWord(sessionId, wordRaw) {
+    async submitWord(sessionId: string, wordRaw: string): Promise<SubmitWordResponse> {
         await this._delay(500); // Symulacja opóźnienia sieci
+
         const session = this.db.sessions[sessionId];
         if (!session || session.state !== 'playing') {
             throw new Error("Invalid session or game already ended.");
         }
+
         const word = this._normalize(wordRaw);
+
         // 1. Walidacja słownika
         if (!this.dictionary.includes(word) && word !== this.dailyWord) {
             return { status: "error", code: "INVALID_WORD", message: "Brak słowa w słowniku" };
         }
+
         // 2. Walidacja liter (Backend Source of Truth)
-        let result = [];
-        let targetChars = this.dailyWord.split('');
+        let result: SubmitWordResult[] = [];
+        let targetChars: (string | null)[] = this.dailyWord.split('');
         let guessChars = word.split('');
         let won = true;
+
         // Pass 1: Znajdź zielone (correct)
         for (let i = 0; i < this.dailyWord.length; i++) {
             if (guessChars[i] === targetChars[i]) {
                 result.push({ char: guessChars[i], status: "correct" });
                 targetChars[i] = null; // Oznacz jako użyte
-            }
-            else {
+            } else {
                 result.push({ char: guessChars[i], status: null });
                 won = false;
             }
         }
+
         // Pass 2: Znajdź żółte (present)
         for (let i = 0; i < this.dailyWord.length; i++) {
             if (result[i].status !== "correct") {
@@ -103,37 +172,42 @@ export class WordleMockBackend {
                 if (targetIndex > -1) {
                     result[i].status = "present";
                     targetChars[targetIndex] = null;
-                }
-                else {
+                } else {
                     result[i].status = "absent";
                 }
             }
         }
+
         session.attempts.push(word);
+        
         // 3. Aktualizacja stanu gry
-        let gameState = 'playing';
+        let gameState: 'playing' | 'won_pending_ad' | 'lost_pending_ad' = 'playing';
         if (won) {
             gameState = 'won_pending_ad';
             session.state = gameState;
-        }
-        else if (session.attempts.length >= this.maxAttempts) {
+        } else if (session.attempts.length >= this.maxAttempts) {
             gameState = 'lost_pending_ad';
             session.state = gameState;
         }
+
         this._saveDb();
-        let response = {
+
+        let response: SubmitWordResponse = {
             status: "success",
             game_state: gameState,
             result: result,
             attempts_left: this.maxAttempts - session.attempts.length
         };
+
         if (gameState.includes('pending_ad')) {
             response.ad_trigger_url = `/ads/get?game_id=${sessionId}`;
         }
+
         return response;
     }
+
     // [GET] /ads/get
-    async getAd(sessionId) {
+    async getAd(sessionId: string): Promise<GetAdResponse> {
         await this._delay(200);
         return {
             ad_id: "ad_bcs_mvp",
@@ -142,31 +216,37 @@ export class WordleMockBackend {
             verification_token: "tok_" + Math.random().toString(36).substring(2, 11)
         };
     }
+
     // [POST] /reward/claim
-    async claimReward(sessionId, token) {
+    async claimReward(sessionId: string, token: string): Promise<ClaimRewardResponse> {
         await this._delay(600);
         const session = this.db.sessions[sessionId];
         if (!session) {
             throw new Error("Session not found");
         }
+        
         let earnedPoints = 0;
         let streakBonus = 0;
+
         if (session.state === 'won_pending_ad') {
             // Logika punktacji: 100% za 1 próbę, 50% za 6 próbę
             const basePoints = 100;
             const attemptPenalty = (session.attempts.length - 1) * 10;
             earnedPoints = basePoints - attemptPenalty;
+
             this.db.user.streak += 1;
             this.db.user.points += earnedPoints;
             streakBonus = Math.min(this.db.user.streak * 5, 25); // Max 25% bonusu
+            
             session.state = 'completed_rewarded';
-        }
-        else {
+        } else {
             // Przegrana
             this.db.user.streak = 0;
             session.state = 'completed_failed';
         }
+
         this._saveDb();
+
         return {
             status: "success",
             game_state: session.state,
@@ -175,12 +255,14 @@ export class WordleMockBackend {
             streak_bonus_applied: streakBonus + "%"
         };
     }
+
     // User Data
-    async getUserStats() {
+    async getUserStats(): Promise<WordleUser> {
         return this.db.user;
     }
 }
+
 // Globalna instancja symulowanego API dla przeglądarki
 if (typeof window !== 'undefined') {
-    window.api = new WordleMockBackend();
+    (window as any).api = new WordleMockBackend();
 }
