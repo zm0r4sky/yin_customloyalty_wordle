@@ -18,7 +18,7 @@ class WordleMockBackend {
             "OFERT", "ZAKUP", "MARŻA", "KONTO", "WALUT", "PALIW", "MOTOR", "PASEK", "KROKI", "WYNIK"
         ];
         this.maxAttempts = 6;
-        
+
         // Symulowana baza danych w LocalStorage
         this.db = JSON.parse(localStorage.getItem('yin_wordle_db')) || {
             sessions: {},
@@ -41,7 +41,7 @@ class WordleMockBackend {
     // [POST] /game/start
     async startGame(type = 'daily') {
         await this._delay(300); // Symulacja opóźnienia sieci
-        
+
         if (type === 'free') {
             const randIndex = Math.floor(Math.random() * this.dictionary.length);
             this.dailyWord = this.dictionary[randIndex];
@@ -113,7 +113,7 @@ class WordleMockBackend {
         }
 
         session.attempts.push(word);
-        
+
         // 3. Aktualizacja stanu gry
         let gameState = 'playing';
         if (won) {
@@ -140,7 +140,7 @@ class WordleMockBackend {
         return response;
     }
 
-    // [GET] /ads/get
+    // [GET] /ads/get hi bye
     async getAd(sessionId) {
         await this._delay(200);
         return {
@@ -155,7 +155,7 @@ class WordleMockBackend {
     async claimReward(sessionId, token) {
         await this._delay(600);
         const session = this.db.sessions[sessionId];
-        
+
         let earnedPoints = 0;
         let streakBonus = 0;
 
@@ -168,7 +168,7 @@ class WordleMockBackend {
             this.db.user.streak += 1;
             this.db.user.points += earnedPoints;
             streakBonus = Math.min(this.db.user.streak * 5, 25); // Max 25% bonusu
-            
+
             session.state = 'completed_rewarded';
         } else {
             // Przegrana
