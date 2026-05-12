@@ -2,13 +2,31 @@
  * Mock API - Symulacja Backend PHP dla YIN Wordle PWA
  * Source of Truth (Wszystkie walidacje odbywają się tutaj)
  */
+// === KONFIGURACJA ZEWNĘTRZNEGO BACKENDU (PHP) ===
+export const PRODUCTION_API_URL = "https://bcsnagradza.pl/modules/yin_customloyalty_wordle/api.php";
 export class WordleMockBackend {
     dailyWord;
     dictionary;
     maxAttempts;
     db;
+    idCustomer = 0;
+    idPlayer = 0;
     constructor() {
         this.dailyWord = "SKLEP"; // Słowo Dnia (Hardcoded dla MVP)
+        this.idCustomer = 0;
+        this.idPlayer = 0;
+        if (typeof window !== 'undefined') {
+            // 1. Sprawdzamy czy PrestaShop wstrzyknął zalogowanego id_customer
+            const psCustomerId = window.id_customer;
+            if (typeof psCustomerId !== 'undefined' && parseInt(psCustomerId) > 0) {
+                this.idCustomer = parseInt(psCustomerId);
+            }
+            // 2. Pobieramy id_player z LocalStorage (szczególnie ważne dla gości, ale przydatne dla każdego)
+            const savedIdPlayer = localStorage.getItem('yin_wordle_id_player');
+            if (savedIdPlayer) {
+                this.idPlayer = parseInt(savedIdPlayer);
+            }
+        }
         // Duży słownik testowy dla słów o długościach od 5 do 12 liter (wyłącznie zweryfikowane polskie słowa)
         this.dictionary = [
             // 5 liter
@@ -45,8 +63,17 @@ export class WordleMockBackend {
         }
         this.db = stored ? JSON.parse(stored) : {
             sessions: {},
-            user: { points: 0, streak: 0 }
+            user: { points: 0, streak: 0, daily_won_count: 0, free_won_count: 0, free_played_count: 0 }
         };
+        // Upewnij się, że liczniki są zainicjalizowane w obiekcie
+        if (this.db.user) {
+            if (typeof this.db.user.daily_won_count === 'undefined')
+                this.db.user.daily_won_count = 0;
+            if (typeof this.db.user.free_won_count === 'undefined')
+                this.db.user.free_won_count = 0;
+            if (typeof this.db.user.free_played_count === 'undefined')
+                this.db.user.free_played_count = 0;
+        }
     }
     _saveDb() {
         if (typeof localStorage !== 'undefined') {
@@ -59,8 +86,65 @@ export class WordleMockBackend {
     _normalize(word) {
         return word.toUpperCase();
     }
+    isRemoteActive() {
+        if (!PRODUCTION_API_URL)
+            return false;
+        // Zabezpieczenie przed testami jednostkowymi Vitest (zawsze lokalne/offline)
+        const g = globalThis;
+        if (typeof g.process !== 'undefined' && g.process.env && (g.process.env.VITEST || g.process.env.NODE_ENV === 'test')) {
+            return false;
+        }
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            // Wyłączamy zdalne API tylko dla automatycznych testów Playwright (port 8090) lub przy jawnej prośbie (?api=false / ?mock=true)
+            if (window.location.port === '8090' || params.get('api') === 'false' || params.get('mock') === 'true') {
+                return false;
+            }
+        }
+        return true;
+    }
     // [POST] /game/start
     async startGame(type = 'daily', preferredLength = 5) {
+        if (this.isRemoteActive()) {
+            const key = `yin_wordle_id_game_${type}_${preferredLength}`;
+            const savedIdGame = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+            try {
+                const response = await fetch(PRODUCTION_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'startGame',
+                        game_type: type,
+                        length: preferredLength,
+                        id_customer: this.idCustomer,
+                        id_player: this.idPlayer,
+                        id_game: savedIdGame || undefined
+                    })
+                });
+                const data = await response.json();
+                if (data.status === 'error') {
+                    throw new Error(data.message || 'Błąd inicjalizacji gry na serwerze.');
+                }
+                if (data.id_player && typeof localStorage !== 'undefined') {
+                    this.idPlayer = data.id_player;
+                    localStorage.setItem('yin_wordle_id_player', data.id_player.toString());
+                }
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem(key, data.id_game);
+                }
+                return {
+                    status: "success",
+                    game_id: data.id_game,
+                    word_length: data.length,
+                    max_attempts: data.max_attempts || 6,
+                    attempts_left: data.attempts_left,
+                    guesses: data.guesses
+                };
+            }
+            catch (err) {
+                console.error("AJAX Start Game Error, falling back to mock:", err);
+            }
+        }
         await this._delay(300); // Symulacja opóźnienia sieci
         if (type === 'daily') {
             this.dailyWord = "SKLEP"; // Tryb dzienny zawsze ma słowo "SKLEP" dla MVP
@@ -105,6 +189,23 @@ export class WordleMockBackend {
     }
     // [POST] /game/submit-word
     async submitWord(sessionId, wordRaw) {
+        if (this.isRemoteActive()) {
+            try {
+                const response = await fetch(PRODUCTION_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'submitWord',
+                        id_game: sessionId,
+                        word: wordRaw
+                    })
+                });
+                return await response.json();
+            }
+            catch (err) {
+                console.error("AJAX Submit Word Error, falling back to mock:", err);
+            }
+        }
         await this._delay(500); // Symulacja opóźnienia sieci
         const session = this.db.sessions[sessionId];
         if (!session || session.state !== 'playing') {
@@ -169,6 +270,22 @@ export class WordleMockBackend {
     }
     // [GET] /ads/get
     async getAd(sessionId) {
+        if (this.isRemoteActive()) {
+            try {
+                const response = await fetch(PRODUCTION_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'getAd',
+                        id_game: sessionId
+                    })
+                });
+                return await response.json();
+            }
+            catch (err) {
+                console.error("AJAX Get Ad Error, falling back to mock:", err);
+            }
+        }
         await this._delay(200);
         return {
             ad_id: "ad_bcs_mvp",
@@ -179,6 +296,34 @@ export class WordleMockBackend {
     }
     // [POST] /reward/claim
     async claimReward(sessionId, token) {
+        if (this.isRemoteActive()) {
+            try {
+                const response = await fetch(PRODUCTION_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'claimReward',
+                        id_game: sessionId,
+                        token: token,
+                        id_customer: this.idCustomer
+                    })
+                });
+                const data = await response.json();
+                // Czyszczenie id_game dla wszystkich konfiguracji po odebraniu nagrody, aby nowa gra rozpoczęła się od czystej sesji
+                if (typeof localStorage !== 'undefined') {
+                    const keys = Object.keys(localStorage);
+                    for (const k of keys) {
+                        if (k.startsWith('yin_wordle_id_game_')) {
+                            localStorage.removeItem(k);
+                        }
+                    }
+                }
+                return data;
+            }
+            catch (err) {
+                console.error("AJAX Claim Reward Error, falling back to mock:", err);
+            }
+        }
         await this._delay(600);
         const session = this.db.sessions[sessionId];
         if (!session) {
@@ -194,14 +339,26 @@ export class WordleMockBackend {
             const basePoints = 100;
             const attemptPenalty = (session.attempts.length - 1) * 10;
             earnedPoints = basePoints - attemptPenalty;
-            this.db.user.streak += 1;
-            this.db.user.points += earnedPoints;
+            if (session.type === 'daily') {
+                this.db.user.streak += 1;
+                this.db.user.points += earnedPoints;
+                this.db.user.daily_won_count = (this.db.user.daily_won_count || 0) + 1;
+            }
+            else {
+                this.db.user.free_won_count = (this.db.user.free_won_count || 0) + 1;
+                this.db.user.free_played_count = (this.db.user.free_played_count || 0) + 1;
+            }
             streakBonus = Math.min(this.db.user.streak * 5, 25); // Max 25% bonusu
             session.state = 'completed_rewarded';
         }
         else {
             // Przegrana
-            this.db.user.streak = 0;
+            if (session.type === 'daily') {
+                this.db.user.streak = 0;
+            }
+            else {
+                this.db.user.free_played_count = (this.db.user.free_played_count || 0) + 1;
+            }
             session.state = 'completed_failed';
         }
         this._saveDb();
@@ -215,6 +372,28 @@ export class WordleMockBackend {
     }
     // User Data
     async getUserStats() {
+        if (this.isRemoteActive()) {
+            try {
+                const response = await fetch(PRODUCTION_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'getUserStats',
+                        id_customer: this.idCustomer,
+                        id_player: this.idPlayer
+                    })
+                });
+                const data = await response.json();
+                if (data.id_player && typeof localStorage !== 'undefined') {
+                    this.idPlayer = data.id_player;
+                    localStorage.setItem('yin_wordle_id_player', data.id_player.toString());
+                }
+                return data;
+            }
+            catch (err) {
+                console.error("AJAX Get User Stats Error, falling back to mock:", err);
+            }
+        }
         return this.db.user;
     }
 }

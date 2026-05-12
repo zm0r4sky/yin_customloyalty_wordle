@@ -88,16 +88,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateLengthSelectorUI();
             currentGameType = 'daily';
             const response = await window.api.startGame('daily', wordLength);
-            gameId = response.game_id;
-            wordLength = response.word_length;
-            maxAttempts = response.attempts_left;
-            buildBoard();
-            buildKeyboard();
+            initializeSession(response);
             setupKeyboardEvents();
             setupHeaderControls();
         }
         catch (e) {
             showToast("Błąd inicjalizacji gry.");
+        }
+    }
+    function initializeSession(response) {
+        gameId = response.game_id;
+        wordLength = response.word_length;
+        maxAttempts = response.max_attempts || 6;
+        buildBoard();
+        buildKeyboard();
+        if (response.guesses && response.guesses.length > 0) {
+            for (let i = 0; i < response.guesses.length; i++) {
+                const guessObj = response.guesses[i];
+                currentRow = i;
+                for (let c = 0; c < wordLength; c++) {
+                    const tile = document.getElementById(`tile-${currentRow}-${c}`);
+                    if (tile) {
+                        tile.textContent = guessObj.result[c].char;
+                        tile.classList.add('filled');
+                        tile.classList.add(guessObj.result[c].status);
+                    }
+                }
+                updateKeyboardColors(guessObj.result);
+            }
+            currentRow = response.guesses.length;
+            currentTile = 0;
+            currentGuess = "";
+            if (response.game_state && response.game_state.includes('pending_ad')) {
+                isGameOver = true;
+                setTimeout(() => triggerAdGateway(response.game_state), 100);
+            }
+            else {
+                isGameOver = false;
+            }
+        }
+        else {
+            currentRow = 0;
+            currentTile = 0;
+            currentGuess = "";
+            isGameOver = false;
         }
     }
     function buildBoard() {
@@ -503,22 +537,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     async function resetGame(type) {
-        board.innerHTML = '';
         keyColors = {};
         currentGameType = type;
         hidePlayAgainKeyboardCTA();
-        buildKeyboard();
-        currentRow = 0;
-        currentTile = 0;
-        currentGuess = "";
-        isGameOver = false;
         isProcessing = false;
         try {
             const response = await window.api.startGame(type, wordLength);
-            gameId = response.game_id;
-            wordLength = response.word_length;
-            maxAttempts = response.attempts_left;
-            buildBoard();
+            initializeSession(response);
             showToast(`Rozpoczęto nową grę (${type === 'daily' ? 'Tryb Dzienny' : 'Tryb Free Play'})`);
         }
         catch (e) {
