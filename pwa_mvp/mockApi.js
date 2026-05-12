@@ -184,6 +184,9 @@ export class WordleMockBackend {
         if (!session) {
             throw new Error("Session not found");
         }
+        if (session.state === 'completed_rewarded' || session.state === 'completed_failed' || session.state === 'completed') {
+            throw new Error("Reward already claimed or session finished");
+        }
         let earnedPoints = 0;
         let streakBonus = 0;
         if (session.state === 'won_pending_ad') {

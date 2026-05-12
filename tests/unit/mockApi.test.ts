@@ -95,7 +95,7 @@ describe('WordleMockBackend Unit Tests', () => {
     const ad = await backend.getAd(game.game_id);
     const claim = await backend.claimReward(game.game_id, ad.verification_token);
     const stats = await backend.getUserStats();
-
+    
     // Score on 1st attempt: 100 base points, streak incremented to 1
     expect(claim.status).toBe('success');
     expect(claim.game_state).toBe('completed_rewarded');
@@ -103,5 +103,50 @@ describe('WordleMockBackend Unit Tests', () => {
     expect(claim.new_streak).toBe(1);
     expect(stats.points).toBe(100);
     expect(stats.streak).toBe(1);
+  });
+
+  test('should prevent claiming rewards twice (Double Claim Protection)', async () => {
+    const backend = new WordleMockBackend();
+    backend.dailyWord = "SKLEP";
+    
+    const game = await backend.startGame('daily');
+    await backend.submitWord(game.game_id, 'SKLEP');
+    
+    const ad = await backend.getAd(game.game_id);
+    const token = ad.verification_token;
+    
+    // First claim - should succeed
+    const firstClaim = await backend.claimReward(game.game_id, token);
+    expect(firstClaim.status).toBe('success');
+    expect(firstClaim.game_state).toBe('completed_rewarded');
+    
+    // Second claim - should throw an error or reject the promise
+    await expect(backend.claimReward(game.game_id, token)).rejects.toThrow('Reward already claimed or session finished');
+  });
+
+  test('should initialize game with different custom word lengths in free play', async () => {
+    const backend = new WordleMockBackend();
+    
+    // Start game with 8 letters
+    const game8 = await backend.startGame('free', 8);
+    expect(game8.word_length).toBe(8);
+    expect(backend.dailyWord.length).toBe(8);
+
+    // Start game with 12 letters
+    const game12 = await backend.startGame('free', 12);
+    expect(game12.word_length).toBe(12);
+    expect(backend.dailyWord.length).toBe(12);
+  });
+
+  test('should verify all dictionary assets fall strictly within 5 to 12 letter bounds', () => {
+    const backend = new WordleMockBackend();
+    expect(backend.dictionary.length).toBeGreaterThan(0);
+    
+    backend.dictionary.forEach(word => {
+      expect(word.length).toBeGreaterThanOrEqual(5);
+      expect(word.length).toBeLessThanOrEqual(12);
+      // Make sure it is uppercase
+      expect(word).toBe(word.toUpperCase());
+    });
   });
 });

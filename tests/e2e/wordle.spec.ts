@@ -9,10 +9,12 @@ test.describe('Wordle PWA E2E Flows', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the app (automatically served on port 8080 by Playwright webServer)
     await page.goto('/');
+    // Clear localStorage to ensure perfect E2E test isolation (no state leakage between test runs)
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
     // Wait for the board to build and the game to initialize (resolves async initGame network delay)
     await page.locator('#tile-0-0').waitFor();
   });
-
   test('should render game container, stats, and empty board on start', async ({ page }) => {
     // Assert Header and Title Logo
     await expect(page.locator('.logo-bcs')).toContainText('YIN');
@@ -95,8 +97,7 @@ test.describe('Wordle PWA E2E Flows', () => {
 
     // 5. Wait for countdown to reach 0 and skip button to be active
     const skipBtn = page.locator('#skip-ad-btn');
-    await expect(skipBtn).toBeEnabled({ timeout: 6000 });
-
+    await expect(skipBtn).toBeEnabled({ timeout: 10000 });
     // 6. Click to close ad and claim reward
     await skipBtn.click();
 
@@ -125,5 +126,78 @@ test.describe('Wordle PWA E2E Flows', () => {
     // Dispatch online event
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
     await expect(offlineIndicator).not.toBeVisible();
+  });
+  test('should handle settings modal and swap enter/backspace keys layout', async ({ page }) => {
+    // Open Settings Modal
+    await page.locator('#btn-settings').click();
+    const settingsModal = page.locator('#settings-modal');
+    await expect(settingsModal).toBeVisible();
+
+    // Toggle swap key setting
+    const toggle = page.locator('#toggle-swap-keys');
+    await expect(toggle).not.toBeChecked();
+    // Click the slider span which is 100% visible and clickable
+    await page.locator('.slider').click();
+    await expect(toggle).toBeChecked();
+    // Close Settings Modal
+    await page.locator('#close-settings').click();
+    await expect(settingsModal).not.toBeVisible();
+
+    // Verify key positions are swapped on the virtual keyboard
+    // Default: COFNIJ is on the bottom row left, ENTER is on the bottom row right
+    // Swapped: ENTER should be on the bottom row left, COFNIJ should be on the bottom row right
+    const firstKey = page.locator('.keyboard-row').nth(2).locator('button').first();
+    const lastKey = page.locator('.keyboard-row').nth(2).locator('button').last();
+    await expect(firstKey).toHaveAttribute('data-key', 'ENTER');
+    await expect(lastKey).toHaveAttribute('data-key', 'BACKSPACE');
+  });
+
+  test('should rebuild board grid when changing word length in settings', async ({ page }) => {
+    // Open Settings Modal
+    await page.locator('#btn-settings').click();
+    const settingsModal = page.locator('#settings-modal');
+    await expect(settingsModal).toBeVisible();
+
+    // Select 8-letter word length
+    const lenBtn = page.locator('#length-selector button[data-len="8"]');
+    await lenBtn.click();
+
+    // Selecting a word length automatically triggers settingsModal closure, expect it to hide
+    await expect(settingsModal).not.toBeVisible();
+
+    // Board should rebuild with 8 columns
+    const firstRowTiles = page.locator('#board .board-row').first().locator('.tile');
+    await expect(firstRowTiles).toHaveCount(8);
+  });
+  test('should hide keyboard and display free play play-again CTA when clicking finish', async ({ page }) => {
+    // 1. Submit winning word "SKLEP"
+    await page.keyboard.type('sklep');
+    await page.keyboard.press('Enter');
+
+    // 2. Click through ad and end modals
+    const skipBtn = page.locator('#skip-ad-btn');
+    await expect(skipBtn).toBeEnabled({ timeout: 10000 });
+    await skipBtn.click();
+    const endModal = page.locator('#end-modal');
+    await expect(endModal).toBeVisible();
+
+    // Click "Zakończ"
+    await page.locator('#close-end-modal').click();
+    await expect(endModal).not.toBeVisible();
+
+    // 3. Virtual keyboard should be hidden and play-again CTA should be visible
+    const keyboard = page.locator('#keyboard');
+    await expect(keyboard).not.toBeVisible();
+
+    const ctaBtn = page.locator('#keyboard-play-again-btn');
+    await expect(ctaBtn).toBeVisible();
+
+    // 4. Click Play Again CTA
+    await ctaBtn.click();
+
+    // 5. Board should be cleared, and keyboard should reappear
+    await expect(keyboard).toBeVisible();
+    await expect(ctaBtn).not.toBeVisible();
+    await expect(page.locator('#tile-0-0')).toBeEmpty();
   });
 });

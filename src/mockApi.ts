@@ -250,13 +250,16 @@ export class WordleMockBackend {
             verification_token: "tok_" + Math.random().toString(36).substring(2, 11)
         };
     }
-
     // [POST] /reward/claim
     async claimReward(sessionId: string, token: string): Promise<ClaimRewardResponse> {
         await this._delay(600);
         const session = this.db.sessions[sessionId];
         if (!session) {
             throw new Error("Session not found");
+        }
+        
+        if (session.state === 'completed_rewarded' || session.state === 'completed_failed' || session.state === 'completed') {
+            throw new Error("Reward already claimed or session finished");
         }
         
         let earnedPoints = 0;
