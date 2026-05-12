@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yin-wordle-v1';
+const CACHE_NAME = 'yin-wordle-v2';
 const ASSETS = [
     './',
     './index.html',
@@ -27,9 +27,20 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Prosta strategia Cache-First dla assetów PWA
+    // Strategia Network-First dla ułatwienia testów MVP (pobiera nowe, w razie braku sieci używa cache)
     event.respondWith(
-        caches.match(event.request)
-            .then(response => response || fetch(event.request))
+        fetch(event.request)
+            .then(networkResponse => {
+                // Klonujemy odpowiedź przed zapisem do cache
+                const responseClone = networkResponse.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, responseClone);
+                });
+                return networkResponse;
+            })
+            .catch(() => {
+                // Błąd sieci (Offline) - zwracamy wersję zbuforowaną
+                return caches.match(event.request);
+            })
     );
 });
