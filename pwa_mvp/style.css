@@ -508,10 +508,11 @@ body {
 }
 
 .modal-scrollable-body {
-    padding: 20px;
-    max-height: 75vh;
+    padding: 20px 20px 40px 20px;
+    max-height: 65vh;
     overflow-y: auto;
     text-align: left;
+    -webkit-overflow-scrolling: touch; /* Smooth kinetic scrolling on iOS Safari/Chrome */
 }
 
 .help-desc {
@@ -754,17 +755,21 @@ input:checked+.slider:before {
     line-height: 1.5;
     margin-bottom: 25px;
 }
-
 /* ===== SŁOWO DNIA (DAILY GAME) AND BOARD WRAPPERS ===== */
 .board-wrapper {
     position: relative;
     margin: 0 auto;
     display: inline-block;
+    transition: padding-top 0.2s ease;
+}
+
+.board-wrapper.daily-game {
+    padding-top: 18px; /* Reserves perfect space inside the wrapper box for daily-badge */
 }
 
 .daily-badge {
     position: absolute;
-    top: -16px;
+    top: 0; /* Sit at the very top of the padding box area */
     left: 2px;
     font-size: 0.72rem;
     font-weight: 800;
@@ -778,7 +783,6 @@ input:checked+.slider:before {
     font-family: 'Inter', sans-serif;
     animation: gold-pulse 2.5s infinite ease-in-out;
 }
-
 /* Luxury gold pulse for daily game label */
 @keyframes gold-pulse {
 

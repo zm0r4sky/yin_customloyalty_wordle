@@ -124,14 +124,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         board.innerHTML = '';
         
         const dailyBadge = document.getElementById('daily-badge') as HTMLElement;
+        const boardWrapper = board.parentElement as HTMLElement;
         if (dailyBadge) {
             dailyBadge.style.display = currentGameType === 'daily' ? 'block' : 'none';
         }
         
         if (currentGameType === 'daily') {
             board.classList.add('daily-game');
+            if (boardWrapper) boardWrapper.classList.add('daily-game');
         } else {
             board.classList.remove('daily-game');
+            if (boardWrapper) boardWrapper.classList.remove('daily-game');
         }
 
         document.documentElement.style.setProperty('--word-length', wordLength.toString());
@@ -158,7 +161,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!section || !boardElem) return;
         
         const availW = section.clientWidth - 20; 
-        const availH = section.clientHeight - 16; 
+        const badgeOffset = currentGameType === 'daily' ? 18 : 0;
+        const availH = section.clientHeight - 16 - badgeOffset; 
         const gap = 4;
         
         const maxTileW = (availW - (wordLength - 1) * gap) / wordLength;
