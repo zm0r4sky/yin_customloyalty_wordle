@@ -5,8 +5,18 @@
 class WordleMockBackend {
     constructor() {
         this.dailyWord = "SKLEP"; // Słowo Dnia (Hardcoded dla MVP)
-        // Podstawowy słownik (dla celów testowych)
-        this.dictionary = ["SKLEP", "KAMER", "EKRAN", "OBRAZ", "KABEL", "WIDEO", "AUDIO", "RUTER", "POLAK", "DOBRO", "SŁOWO", "ŻÓŁTY", "UCHWYT", "ALARM"];
+        // Duży słownik testowy (wyłącznie zweryfikowane polskie słowa 5-literowe)
+        this.dictionary = [
+            "SKLEP", "EKRAN", "OBRAZ", "KABEL", "WIDEO", "AUDIO", "RUTER", "POLAK", "DOBRO", "SŁOWO",
+            "ŻÓŁTY", "ALARM", "DRZWI", "ZAMEK", "PILOT", "KARTA", "KODER", "MYSZA", "PŁYTA", "MASKA",
+            "PORTY", "DYSKI", "PASEK", "RAMKA", "KANAŁ", "KLUCZ", "TAJNE", "FOKUS", "BŁYSK", "JASNY",
+            "KOLOR", "WIZJA", "ROZUM", "UMYSŁ", "SERCE", "ZIMNO", "WIATR", "BURZA", "DROGA", "TRAWA",
+            "OGIEŃ", "MIECZ", "KUBEK", "MLEKO", "PIWKO", "WINKO", "WÓDKA", "CHLEB", "MASŁO", "SEREK",
+            "MIĘSO", "OWOCE", "ZIOŁA", "BLOKI", "ULICA", "ROWER", "LAMPY", "STOŁY", "FOTEL", "MYDŁO",
+            "PASTA", "ZEGAR", "PIERŚ", "MIEDŹ", "SZKŁO", "DESKA", "BETON", "CEGŁA", "PIACH", "GLINA",
+            "KWIAT", "KOSZT", "WIRUS", "ZYSKI", "WĘZEŁ", "KUPON", "HASŁO", "TABLA", "KOLOR", "MOTYW",
+            "OFERT", "ZAKUP", "MARŻA", "KONTO", "WALUT", "PALIW", "MOTOR", "PASEK", "KROKI", "WYNIK"
+        ];
         this.maxAttempts = 6;
         
         // Symulowana baza danych w LocalStorage
