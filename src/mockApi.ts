@@ -153,6 +153,37 @@ export class WordleMockBackend {
         return word.toUpperCase();
     }
 
+    public _evaluateGuess(word: string, targetWord: string): SubmitWordResult[] {
+        let result: SubmitWordResult[] = [];
+        let targetChars: (string | null)[] = targetWord.split('');
+        let guessChars = word.split('');
+
+        // Pass 1: Znajdź zielone (correct)
+        for (let i = 0; i < targetWord.length; i++) {
+            if (guessChars[i] === targetChars[i]) {
+                result.push({ char: guessChars[i], status: "correct" });
+                targetChars[i] = null;
+            } else {
+                result.push({ char: guessChars[i], status: null });
+            }
+        }
+
+        // Pass 2: Znajdź żółte (present)
+        for (let i = 0; i < targetWord.length; i++) {
+            if (result[i].status !== "correct") {
+                let targetIndex = targetChars.indexOf(guessChars[i]);
+                if (targetIndex > -1) {
+                    result[i].status = "present";
+                    targetChars[targetIndex] = null;
+                } else {
+                    result[i].status = "absent";
+                }
+            }
+        }
+
+        return result;
+    }
+
     public isRemoteActive(): boolean {
         if (!PRODUCTION_API_URL) return false;
         
@@ -220,11 +251,62 @@ export class WordleMockBackend {
 
         await this._delay(300); // Symulacja opóźnienia sieci
         
+        let length = preferredLength;
+
+        // 1. ZABEZPIECZENIE: Zmiana długości słowa w trakcie aktywnej gry oznacza walkower (przegraną)!
+        if (type === 'free') {
+            let activeSessId: string | null = null;
+            let activeSess: WordleSession | null = null;
+
+            for (const [sid, sess] of Object.entries(this.db.sessions)) {
+                if (sess.type === 'free' && sess.state === 'playing') {
+                    activeSessId = sid;
+                    activeSess = sess;
+                    break;
+                }
+            }
+
+            if (activeSess && activeSessId) {
+                const activeLength = this.dailyWord ? this.dailyWord.length : 5;
+                if (preferredLength !== activeLength) {
+                    // Walkower: naliczamy grę jako rozegraną i zamykamy jako zakończoną porażką
+                    this.db.user.free_played_count = (this.db.user.free_played_count || 0) + 1;
+                    activeSess.state = 'completed';
+                    this._saveDb();
+
+                    // Wybieramy nową długość dla nowej gry
+                    if (preferredLength === 0) {
+                        length = Math.floor(Math.random() * 8) + 5; // 5 do 12
+                    } else {
+                        length = preferredLength;
+                    }
+                } else {
+                    // Wznawiamy istniejącą grę o tej samej długości
+                    const guesses = activeSess.attempts.map(word => {
+                        return { word, result: this._evaluateGuess(word, this.dailyWord) };
+                    });
+
+                    return {
+                        status: "success",
+                        game_token: activeSessId,
+                        word_length: activeLength,
+                        attempts_left: this.maxAttempts - activeSess.attempts.length,
+                        guesses
+                    };
+                }
+            } else {
+                // Jeśli brak aktywnej sesji i wybrano Losowo (preferredLength = 0), wybieramy długość od 5 do 12
+                if (preferredLength === 0) {
+                    length = Math.floor(Math.random() * 8) + 5;
+                }
+            }
+        }
+
         if (type === 'daily') {
             this.dailyWord = "SKLEP"; // Tryb dzienny zawsze ma słowo "SKLEP" dla MVP
+            length = 5;
         } else {
             // Tryb Free Play - losujemy słowo o wybranej długości
-            const length = preferredLength;
             const filtered = this.dictionary.filter(w => w.length === length);
             if (filtered.length > 0) {
                 const randIndex = Math.floor(Math.random() * filtered.length);

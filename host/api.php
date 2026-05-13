@@ -159,13 +159,53 @@ function getOrCreatePlayer($db, $idPlayerClient, $idCustomer) {
  */
 function handleStartGame($db, $input) {
     $gameType = $input['game_type'] ?? 'daily';
-    $preferredLength = intval($input['length'] ?? 5);
+    $rawLengthInput = isset($input['length']) ? intval($input['length']) : 5;
+    $preferredLength = $rawLengthInput;
     $idCustomer = intval($input['id_customer'] ?? 0);
     $idPlayerClient = intval($input['id_player'] ?? 0);
     $gameToken = $input['game_token'] ?? '';
 
     // Pobieramy lub tworzymy unikalny identyfikator gracza
     $idPlayer = getOrCreatePlayer($db, $idPlayerClient, $idCustomer);
+
+    // 1. ZABEZPIECZENIE: Zmiana długości słowa w trakcie aktywnej gry oznacza walkower (przegraną)!
+    if ($gameType === 'free' && $idPlayer > 0) {
+        $stmtActiveGame = $db->prepare("SELECT * FROM `ps_bn_yin_customloyalty_wordle_games` 
+            WHERE `id_player` = ? AND `game_type` = 'free' AND `game_state` = 'playing' 
+            LIMIT 1");
+        $stmtActiveGame->execute([$idPlayer]);
+        $activeGame = $stmtActiveGame->fetch();
+
+        if ($activeGame) {
+            $activeLength = mb_strlen($activeGame['target_word'], 'UTF-8');
+            
+            // Jeśli gracz przesłał nową preferencję długości (np. 6 lub 0 dla Losowo) różną od aktualnej gry
+            if ($rawLengthInput !== $activeLength) {
+                // Walkower: zwiększamy licznik rozegranych gier we Free Play (ale nie wygranych!)
+                $stmtForfeitStats = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_player_stats` 
+                    SET `free_played_count` = `free_played_count` + 1 
+                    WHERE `id_player` = ?");
+                $stmtForfeitStats->execute([$idPlayer]);
+
+                // Oznaczamy tamtą sesję jako zakończoną porażką
+                $stmtForfeitGame = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_games` 
+                    SET `game_state` = 'completed_rewarded', `date_upd` = NOW() 
+                    WHERE `id_game` = ?");
+                $stmtForfeitGame->execute([$activeGame['id_game']]);
+
+                // Usuwamy token starej gry, by zmusić do rozpoczęcia nowej sesji o nowej długości
+                $gameToken = '';
+            } else {
+                // Ta sama długość - wznawiamy grę
+                $gameToken = $activeGame['game_token'];
+            }
+        }
+    }
+
+    // 2. Jeśli wybrano tryb "Losowo" (length = 0), losujemy liczbę liter od 5 do 12
+    if ($gameType === 'free' && $preferredLength === 0) {
+        $preferredLength = rand(5, 12);
+    }
 
     // Jeśli gracz nie podał tokenu w zapytaniu (np. wyczyścił cache), sprawdzamy czy ma aktywną, niedokończoną grę w bazie danych
     if (empty($gameToken) && $idPlayer > 0) {

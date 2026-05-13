@@ -149,4 +149,31 @@ describe('WordleMockBackend Unit Tests', () => {
       expect(word).toBe(word.toUpperCase());
     });
   });
+
+  test('should start a game with random length when preferredLength is 0', async () => {
+    const backend = new WordleMockBackend();
+    const game = await backend.startGame('free', 0);
+    
+    expect(game.status).toBe('success');
+    expect(game.word_length).toBeGreaterThanOrEqual(5);
+    expect(game.word_length).toBeLessThanOrEqual(12);
+    expect(backend.dailyWord.length).toBe(game.word_length);
+  });
+
+  test('should forfeit active free play game when starting with a different word length', async () => {
+    const backend = new WordleMockBackend();
+    
+    // Start initial 5-letter free play game
+    const game5 = await backend.startGame('free', 5);
+    expect(game5.word_length).toBe(5);
+    
+    // Now start an 8-letter free play game while 5-letter is active
+    const game8 = await backend.startGame('free', 8);
+    expect(game8.word_length).toBe(8);
+    
+    // The previous 5-letter game should be forfeited and increment free_played_count
+    const stats = await backend.getUserStats();
+    expect(stats.free_played_count).toBe(1);
+    expect(stats.free_won_count || 0).toBe(0); // no win recorded
+  });
 });

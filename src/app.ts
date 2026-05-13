@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateLengthSelectorUI();
 
             currentGameType = 'daily';
-            const response = await window.api.startGame('daily', wordLength);
+            const response = await window.api.startGame('daily', 5);
             initializeSession(response);
 
             setupKeyboardEvents();
@@ -358,9 +358,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             lengthSelector.addEventListener('click', async (e) => {
                 const target = e.target as HTMLElement;
                 if (target.tagName === 'BUTTON') {
-                    const len = parseInt(target.getAttribute('data-len') || '5');
-                    if (len >= 5 && len <= 12 && len !== wordLength) {
-                        wordLength = len;
+                    const lenAttr = target.getAttribute('data-len');
+                    const len = lenAttr === 'random' ? 0 : parseInt(lenAttr || '5');
+                    const savedLength = parseInt(localStorage.getItem('wordLength') || '5');
+                    
+                    if (len !== savedLength) {
+                        // Jeśli zmieniamy długość w trakcie aktywnej gry we Free Play
+                        if (currentGameType === 'free' && !isGameOver) {
+                            showToast("Poddano grę (walkower)!");
+                        }
+                        
                         localStorage.setItem('wordLength', len.toString());
                         updateLengthSelectorUI();
                         settingsModal.style.display = 'none'; // Zamknij modal po wyborze
@@ -373,10 +380,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateLengthSelectorUI() {
         if (!lengthSelector) return;
+        const savedLength = parseInt(localStorage.getItem('wordLength') || '5');
         const buttons = lengthSelector.querySelectorAll('button');
         buttons.forEach(btn => {
-            const len = parseInt(btn.getAttribute('data-len') || '5');
-            if (len === wordLength) {
+            const btnLenAttr = btn.getAttribute('data-len');
+            const btnLen = btnLenAttr === 'random' ? 0 : parseInt(btnLenAttr || '5');
+            if (btnLen === savedLength) {
                 btn.classList.add('active');
             } else {
                 btn.classList.remove('active');
@@ -591,7 +600,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         isProcessing = false;
         
         try {
-            const response = await window.api.startGame(type, wordLength);
+            const lenReq = type === 'daily' ? 5 : parseInt(localStorage.getItem('wordLength') || '5');
+            const response = await window.api.startGame(type, lenReq);
             initializeSession(response);
             showToast(`Rozpoczęto nową grę (${type === 'daily' ? 'Tryb Dzienny' : 'Tryb Free Play'})`);
         } catch (e) {
