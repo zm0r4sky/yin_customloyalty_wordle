@@ -86,9 +86,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (toggleSwapKeys)
                 toggleSwapKeys.checked = swapEnterBackspace;
             updateLengthSelectorUI();
+            // Próba rozpoczęcia gry codziennej
             currentGameType = 'daily';
             const response = await window.api.startGame('daily', 5);
-            initializeSession(response);
+            // Jeśli gra codzienna na dziś jest już całkowicie zakończona i odebrana, 
+            // automatycznie przenosimy gracza do trybu Free Play (treningu), aby nie blokować go na ukończonej planszy.
+            if (response.game_state && response.game_state !== 'playing' && !response.game_state.includes('pending_ad')) {
+                currentGameType = 'free';
+                const lenReq = parseInt(localStorage.getItem('wordLength') || '5');
+                const freeResponse = await window.api.startGame('free', lenReq);
+                initializeSession(freeResponse);
+                showToast("Dzisiejsze słowo dnia już zaliczone! Witaj w trybie Free Play.");
+            }
+            else {
+                initializeSession(response);
+            }
             setupKeyboardEvents();
             setupHeaderControls();
         }
@@ -119,18 +131,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentRow = response.guesses.length;
             currentTile = 0;
             currentGuess = "";
-            if (response.game_state && response.game_state.includes('pending_ad')) {
-                isGameOver = true;
-                setTimeout(() => triggerAdGateway(response.game_state), 100);
-            }
-            else {
-                isGameOver = false;
-            }
         }
         else {
             currentRow = 0;
             currentTile = 0;
             currentGuess = "";
+        }
+        // Ustawienie flagi końca gry na podstawie statusu sesji (zapobiega pisaniu po skończonej grze)
+        if (response.game_state && response.game_state !== 'playing') {
+            isGameOver = true;
+            if (response.game_state.includes('pending_ad')) {
+                setTimeout(() => triggerAdGateway(response.game_state), 100);
+            }
+            else {
+                setTimeout(() => showPlayAgainKeyboardCTA(), 100);
+            }
+        }
+        else {
             isGameOver = false;
         }
     }

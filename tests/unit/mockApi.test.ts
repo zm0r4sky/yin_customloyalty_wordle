@@ -176,4 +176,21 @@ describe('WordleMockBackend Unit Tests', () => {
     expect(stats.free_played_count).toBe(1);
     expect(stats.free_won_count || 0).toBe(0); // no win recorded
   });
+
+  test('should return existing completed daily session instead of starting a new one today', async () => {
+    const backend = new WordleMockBackend();
+    backend.dailyWord = "SKLEP";
+    
+    // Play and finish today's daily game
+    const daily1 = await backend.startGame('daily');
+    await backend.submitWord(daily1.game_token, 'SKLEP'); // win
+    const ad = await backend.getAd(daily1.game_token);
+    await backend.claimReward(daily1.game_token, ad.verification_token); // completed_rewarded
+
+    // Attempt to start daily game again
+    const daily2 = await backend.startGame('daily');
+    expect(daily2.game_token).toBe(daily1.game_token);
+    expect(daily2.game_state).toBe('completed_rewarded');
+    expect(daily2.guesses?.length).toBe(1);
+  });
 });

@@ -207,19 +207,20 @@ function handleStartGame($db, $input) {
         $preferredLength = rand(5, 12);
     }
 
-    // Jeśli gracz nie podał tokenu w zapytaniu (np. wyczyścił cache), sprawdzamy czy ma aktywną, niedokończoną grę w bazie danych
-    if (empty($gameToken) && $idPlayer > 0) {
+    // Jeśli gracz ma zarejestrowany profil w bazie danych
+    if ($idPlayer > 0) {
         if ($gameType === 'daily') {
-            // Tryb Codzienny: wznawiamy aktywną grę tylko wtedy, gdy została rozpoczęta DZISIAJ
+            // Tryb Codzienny: ZAWSZE wznawiamy/zwracamy jedyną dzisiejszą sesję, jeśli jakakolwiek istnieje (nawet ukończona)!
+            // Zapobiega to oszustwom i ponownemu uruchamianiu gry codziennej po odświeżeniu strony.
             $stmtActive = $db->prepare("SELECT `game_token` FROM `ps_bn_yin_customloyalty_wordle_games` 
-                WHERE `id_player` = ? AND `game_type` = 'daily' AND `game_state` = 'playing' AND DATE(`date_add`) = CURRENT_DATE() 
+                WHERE `id_player` = ? AND `game_type` = 'daily' AND DATE(`date_add`) = CURRENT_DATE() 
                 LIMIT 1");
             $stmtActive->execute([$idPlayer]);
             $dbActiveToken = $stmtActive->fetchColumn();
             if ($dbActiveToken) {
                 $gameToken = $dbActiveToken;
             }
-        } else {
+        } elseif (empty($gameToken)) {
             // Tryb Free Play: wznawiamy KAŻDĄ aktywną, niedokończoną grę (nawet jeśli rozpoczęto ją wczoraj)
             $stmtActive = $db->prepare("SELECT `game_token` FROM `ps_bn_yin_customloyalty_wordle_games` 
                 WHERE `id_player` = ? AND `game_type` = 'free' AND `game_state` = 'playing' 

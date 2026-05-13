@@ -39,6 +39,7 @@ export interface StartGameResponse {
     max_attempts?: number;
     attempts_left: number;
     guesses?: { word: string; result: SubmitWordResult[] }[];
+    game_state?: string;
 }
 
 export interface SubmitWordResponse {
@@ -242,7 +243,8 @@ export class WordleMockBackend {
                     word_length: data.length,
                     max_attempts: data.max_attempts || 6,
                     attempts_left: data.attempts_left,
-                    guesses: data.guesses
+                    guesses: data.guesses,
+                    game_state: data.game_state
                 };
             } catch (err) {
                 console.error("AJAX Start Game Error, falling back to mock:", err);
@@ -299,6 +301,35 @@ export class WordleMockBackend {
                 if (preferredLength === 0) {
                     length = Math.floor(Math.random() * 8) + 5;
                 }
+            }
+        }
+
+        // 2. ZABEZPIECZENIE: Dla gry codziennej ZAWSZE wznawiamy jedyną dzisiejszą sesję, jeśli jakakolwiek istnieje
+        if (type === 'daily') {
+            let dailySessId: string | null = null;
+            let dailySess: WordleSession | null = null;
+
+            for (const [sid, sess] of Object.entries(this.db.sessions)) {
+                if (sess.type === 'daily') {
+                    dailySessId = sid;
+                    dailySess = sess;
+                    break;
+                }
+            }
+
+            if (dailySess && dailySessId) {
+                const guesses = dailySess.attempts.map(word => {
+                    return { word, result: this._evaluateGuess(word, this.dailyWord) };
+                });
+
+                return {
+                    status: "success",
+                    game_token: dailySessId,
+                    word_length: 5,
+                    attempts_left: this.maxAttempts - dailySess.attempts.length,
+                    guesses,
+                    game_state: dailySess.state
+                };
             }
         }
 
