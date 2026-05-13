@@ -85,17 +85,37 @@
     <div id="end-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h2 id="end-title">Gratulacje!</h2>
-            <p id="end-message">Zdobyto punkty: <strong id="end-points">0</strong></p>
-            <div class="stats-summary">
-                <div class="stat-box">
-                    <span class="stat-value" id="stat-streak">0</span>
-                    <span class="stat-label">Streak</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-value" id="stat-bonus">+0%</span>
-                    <span class="stat-label">Bonus</span>
+            
+            <!-- Statystyki dla Trybu Dziennego (Daily) -->
+            <div id="end-daily-stats">
+                <p id="end-message">Zdobyto punkty: <strong id="end-points">0</strong></p>
+                <div class="stats-summary">
+                    <div class="stat-box">
+                        <span class="stat-value" id="stat-streak">0</span>
+                        <span class="stat-label">Streak</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-value" id="stat-bonus">+0%</span>
+                        <span class="stat-label">Bonus</span>
+                    </div>
                 </div>
             </div>
+
+            <!-- Statystyki dla Trybu Free Play -->
+            <div id="end-free-stats" style="display: none;">
+                <p id="end-free-message" style="margin-bottom: 15px; font-size: 0.95rem; color: #a0aec0;">Ukończono grę treningową!</p>
+                <div class="stats-summary">
+                    <div class="stat-box">
+                        <span class="stat-value" id="stat-free-played">0</span>
+                        <span class="stat-label">Rozegrane</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-value" id="stat-free-winratio">0%</span>
+                        <span class="stat-label">Win Ratio</span>
+                    </div>
+                </div>
+            </div>
+
             <button id="close-end-modal" class="btn-secondary">Zakończ</button>
             <button id="play-again-btn" class="btn-primary" style="margin-top:10px;">Graj następną grę (Free Play)</button>
         </div>

@@ -757,12 +757,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                 endTitle.textContent = "Przegrana!";
                 endTitle.style.color = "var(--absent-color)";
             }
-            endPoints.textContent = result.points_earned.toString();
-            statStreak.textContent = result.new_streak.toString();
-            statBonus.textContent = result.streak_bonus_applied;
+            const stats = await window.api.getUserStats();
+            const endDailyStats = document.getElementById('end-daily-stats');
+            const endFreeStats = document.getElementById('end-free-stats');
+            if (currentGameType === 'free') {
+                if (endDailyStats)
+                    endDailyStats.style.display = 'none';
+                if (endFreeStats)
+                    endFreeStats.style.display = 'block';
+                const played = stats.free_played_count || 0;
+                const won = stats.free_won_count || 0;
+                const ratio = played > 0 ? Math.round((won / played) * 100) : 0;
+                const statFreePlayed = document.getElementById('stat-free-played');
+                const statFreeWinRatio = document.getElementById('stat-free-winratio');
+                if (statFreePlayed)
+                    statFreePlayed.textContent = played.toString();
+                if (statFreeWinRatio)
+                    statFreeWinRatio.textContent = ratio + "%";
+            }
+            else {
+                if (endDailyStats)
+                    endDailyStats.style.display = 'block';
+                if (endFreeStats)
+                    endFreeStats.style.display = 'none';
+                endPoints.textContent = result.points_earned.toString();
+                statStreak.textContent = result.new_streak.toString();
+                statBonus.textContent = result.streak_bonus_applied;
+            }
             const pointsDisplay = document.getElementById('points-display');
             const streakDisplay = document.getElementById('streak-display');
-            const stats = await window.api.getUserStats();
             if (pointsDisplay)
                 pointsDisplay.textContent = `💰 ${stats.points} pkt`;
             if (streakDisplay)

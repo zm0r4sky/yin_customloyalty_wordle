@@ -187,8 +187,8 @@ function handleStartGame($db, $input) {
         if ($activeGame) {
             $activeLength = mb_strlen($activeGame['target_word'], 'UTF-8');
             
-            // Jeśli gracz przesłał nową preferencję długości (np. 6 lub 0 dla Losowo) różną od aktualnej gry
-            if ($rawLengthInput !== $activeLength) {
+            // Jeśli gracz przesłał nową preferencję długości (np. 6) różną od aktualnej gry (pomijamy dla 0, czyli trybu Losowo)
+            if ($rawLengthInput !== 0 && $rawLengthInput !== $activeLength) {
                 // Walkower: zwiększamy licznik rozegranych gier we Free Play (ale nie wygranych!)
                 $stmtForfeitStats = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_player_stats` 
                     SET `free_played_count` = `free_played_count` + 1 
@@ -197,14 +197,14 @@ function handleStartGame($db, $input) {
 
                 // Oznaczamy tamtą sesję jako zakończoną porażką
                 $stmtForfeitGame = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_games` 
-                    SET `game_state` = 'completed_rewarded', `date_upd` = NOW() 
+                    SET `game_state` = 'completed_failed', `date_upd` = NOW() 
                     WHERE `id_game` = ?");
                 $stmtForfeitGame->execute([$activeGame['id_game']]);
 
                 // Usuwamy token starej gry, by zmusić do rozpoczęcia nowej sesji o nowej długości
                 $gameToken = '';
             } else {
-                // Ta sama długość - wznawiamy grę
+                // Ta sama długość lub tryb Losowo - wznawiamy grę
                 $gameToken = $activeGame['game_token'];
             }
         }
@@ -655,15 +655,20 @@ function handleClaimReward($db, $input) {
         $idPlayer
     ]);
 
+    $finalState = 'completed_failed';
+    if ($session['game_state'] === 'won_pending_ad') {
+        $finalState = 'completed_rewarded';
+    }
+
     // D. Oznacz sesję jako pomyślnie nagrodzoną / zakończoną
     $stmtEnd = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_games` 
-        SET `game_state` = 'completed_rewarded', `points_earned` = ?, `verification_token` = NULL, `date_upd` = NOW() 
+        SET `game_state` = ?, `points_earned` = ?, `verification_token` = NULL, `date_upd` = NOW() 
         WHERE `game_token` = ?");
-    $stmtEnd->execute([$earnedPoints, $gameToken]);
+    $stmtEnd->execute([$finalState, $earnedPoints, $gameToken]);
 
     echo json_encode([
         "status" => "success",
-        "game_state" => "completed_rewarded",
+        "game_state" => $finalState,
         "points_earned" => $earnedPoints,
         "new_streak" => $currentStreak,
         "streak_bonus_applied" => $streakBonus . "%"
