@@ -112,3 +112,32 @@ INSERT INTO `ps_bn_yin_customloyalty_wordle_daily` (`scheduled_date`, `word`, `l
 (CURDATE() + INTERVAL 1 DAY, 'MONITOR', 7),
 (CURDATE() + INTERVAL 2 DAY, 'SERWER', 6)
 ON DUPLICATE KEY UPDATE `word` = VALUES(`word`);
+
+-- 5. REKLAMY SPONSORÓW: Dynamiczne, losowo serwowane klikalne reklamy
+CREATE TABLE IF NOT EXISTS `ps_bn_yin_customloyalty_wordle_ads` (
+    `id_ad` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `title` VARCHAR(255) NOT NULL,
+    `banner_url` VARCHAR(255) NOT NULL,
+    `target_url` VARCHAR(255) NOT NULL,
+    `duration_seconds` INT UNSIGNED NOT NULL DEFAULT 5,
+    `active` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
+    `date_add` DATETIME NOT NULL,
+    `date_upd` DATETIME NOT NULL,
+    PRIMARY KEY (`id_ad`),
+    KEY `active_idx` (`active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- C. TRZY REKLAMY TESTOWE (INICJALNE DANE REKLAMOWE)
+INSERT INTO `ps_bn_yin_customloyalty_wordle_ads` 
+(`id_ad`, `title`, `banner_url`, `target_url`, `duration_seconds`, `active`, `date_add`, `date_upd`) 
+VALUES 
+(1, 'BCS Nagradza - Oficjalny Sponsor', 'https://bcsnagradza.pl/img/logo-1730213850.svg', 'https://bcsnagradza.pl/?utm_source=wordle&utm_medium=ad&utm_campaign=bcs_nagradza', 5, 1, NOW(), NOW()),
+(2, 'YIN Modules - Inteligentne systemy lojalnościowe', 'https://bcsnagradza.pl/img/logo-1730213850.svg', 'https://bcsnagradza.pl/?utm_source=wordle&utm_medium=ad&utm_campaign=yin_custom_loyalty', 6, 1, NOW(), NOW()),
+(3, 'Szkolenia i certyfikacja instalatorów BCS', 'https://bcsnagradza.pl/img/logo-1730213850.svg', 'https://bcsnagradza.pl/?utm_source=wordle&utm_medium=ad&utm_campaign=wordle_championship', 7, 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE 
+`title` = VALUES(`title`),
+`banner_url` = VALUES(`banner_url`), 
+`target_url` = VALUES(`target_url`), 
+`duration_seconds` = VALUES(`duration_seconds`), 
+`active` = VALUES(`active`), 
+`date_upd` = NOW();

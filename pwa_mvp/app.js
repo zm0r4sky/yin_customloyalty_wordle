@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             setupHeaderControls();
         }
         catch (e) {
-            showToast("Błąd inicjalizacji gry.");
+            showToast(e.message || "Błąd inicjalizacji gry.");
         }
     }
     function initializeSession(response) {
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         catch (e) {
-            showToast("Błąd serwera.");
+            showToast(e.message || "Błąd serwera.");
         }
         isProcessing = false;
     }
@@ -484,49 +484,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // === SYSTEM REKLAM (AD GATEWAY) ===
     async function triggerAdGateway(gameState) {
-        const adConfig = await window.api.getAd(gameToken);
-        adToken = adConfig.verification_token;
-        const adImage = document.getElementById('ad-image');
-        if (adImage)
-            adImage.src = adConfig.banner_url;
-        adModal.style.display = 'flex';
-        let time = adConfig.duration_seconds;
-        adCountdown.textContent = time.toString();
-        skipAdBtn.disabled = true;
-        skipAdBtn.textContent = "Oglądaj reklamę...";
-        const interval = setInterval(() => {
-            time--;
-            adCountdown.textContent = time.toString();
-            if (time <= 0) {
-                clearInterval(interval);
-                skipAdBtn.disabled = false;
-                skipAdBtn.textContent = gameState === 'won_pending_ad' ? "Odbierz punkty!" : "Zakończ";
-                adCountdown.textContent = "0";
+        try {
+            const adConfig = await window.api.getAd(gameToken);
+            adToken = adConfig.verification_token;
+            const adTitle = document.querySelector('.ad-content h2');
+            if (adTitle) {
+                adTitle.textContent = adConfig.title || "Wiadomość od Sponsora";
             }
-        }, 1000);
+            const adImage = document.getElementById('ad-image');
+            if (adImage) {
+                adImage.src = adConfig.banner_url;
+                if (adConfig.target_url) {
+                    adImage.style.cursor = 'pointer';
+                    adImage.title = "Kliknij, aby otworzyć ofertę sponsora!";
+                    adImage.onclick = () => {
+                        window.open(adConfig.target_url, '_blank', 'noopener,noreferrer');
+                    };
+                }
+                else {
+                    adImage.style.cursor = '';
+                    adImage.title = '';
+                    adImage.onclick = null;
+                }
+            }
+            adModal.style.display = 'flex';
+            if (adCountdown && adCountdown.parentElement) {
+                adCountdown.parentElement.style.display = 'block';
+            }
+            let time = adConfig.duration_seconds;
+            adCountdown.textContent = time.toString();
+            skipAdBtn.disabled = true;
+            skipAdBtn.textContent = "Oglądaj reklamę...";
+            const interval = setInterval(() => {
+                time--;
+                adCountdown.textContent = time.toString();
+                if (time <= 0) {
+                    clearInterval(interval);
+                    skipAdBtn.disabled = false;
+                    skipAdBtn.textContent = gameState === 'won_pending_ad' ? "Odbierz punkty!" : "Zakończ";
+                    adCountdown.textContent = "0";
+                    if (adCountdown && adCountdown.parentElement) {
+                        adCountdown.parentElement.style.display = 'none';
+                    }
+                }
+            }, 1000);
+        }
+        catch (e) {
+            showToast(e.message || "Brak połączenia spróbuj ponownie");
+        }
     }
     skipAdBtn.addEventListener('click', async () => {
-        adModal.style.display = 'none';
-        const result = await window.api.claimReward(gameToken, adToken);
-        endModal.style.display = 'flex';
-        if (result.game_state === 'completed_rewarded') {
-            endTitle.textContent = "Wygrałeś!";
-            endTitle.style.color = "var(--correct-color)";
+        try {
+            adModal.style.display = 'none';
+            const result = await window.api.claimReward(gameToken, adToken);
+            endModal.style.display = 'flex';
+            if (result.game_state === 'completed_rewarded') {
+                endTitle.textContent = "Wygrałeś!";
+                endTitle.style.color = "var(--correct-color)";
+            }
+            else {
+                endTitle.textContent = "Przegrana!";
+                endTitle.style.color = "var(--absent-color)";
+            }
+            endPoints.textContent = result.points_earned.toString();
+            statStreak.textContent = result.new_streak.toString();
+            statBonus.textContent = result.streak_bonus_applied;
+            const pointsDisplay = document.getElementById('points-display');
+            const streakDisplay = document.getElementById('streak-display');
+            const stats = await window.api.getUserStats();
+            if (pointsDisplay)
+                pointsDisplay.textContent = `💰 ${stats.points} pkt`;
+            if (streakDisplay)
+                streakDisplay.textContent = `🔥 ${stats.streak}`;
         }
-        else {
-            endTitle.textContent = "Przegrana!";
-            endTitle.style.color = "var(--absent-color)";
+        catch (e) {
+            showToast(e.message || "Brak połączenia spróbuj ponownie");
         }
-        endPoints.textContent = result.points_earned.toString();
-        statStreak.textContent = result.new_streak.toString();
-        statBonus.textContent = result.streak_bonus_applied;
-        const pointsDisplay = document.getElementById('points-display');
-        const streakDisplay = document.getElementById('streak-display');
-        const stats = await window.api.getUserStats();
-        if (pointsDisplay)
-            pointsDisplay.textContent = `💰 ${stats.points} pkt`;
-        if (streakDisplay)
-            streakDisplay.textContent = `🔥 ${stats.streak}`;
     });
     // === POMOCNICZE OBSŁUGI KLAWIATURY PO ZAKOŃCZENIU GRY ===
     function showPlayAgainKeyboardCTA() {
@@ -572,7 +605,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast(`Rozpoczęto nową grę (${type === 'daily' ? 'Tryb Dzienny' : 'Tryb Free Play'})`);
         }
         catch (e) {
-            showToast("Błąd resetowania gry.");
+            showToast(e.message || "Błąd resetowania gry.");
         }
     }
     // === OFFLINE / ONLINE DETEKCJA ===

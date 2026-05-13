@@ -513,10 +513,35 @@ function handleGetAd($db, $input) {
     $stmt = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_games` SET `verification_token` = ? WHERE `game_token` = ?");
     $stmt->execute([$token, $gameToken]);
 
+    // Pobierz losową aktywną reklamę z bazy danych MySQL z bezpiecznym fallbackiem
+    $title = "Wiadomość od Sponsora"; // Fallback title
+    $bannerUrl = "https://bcsnagradza.pl/img/logo-1730213850.svg"; // Fallback banner
+    $targetUrl = "https://bcsnagradza.pl/"; // Fallback link
+    $durationSeconds = 5; // Fallback duration
+    $adId = "ad_fallback";
+
+    try {
+        $stmtAd = $db->prepare("SELECT * FROM `ps_bn_yin_customloyalty_wordle_ads` WHERE `active` = 1 ORDER BY RAND() LIMIT 1");
+        $stmtAd->execute();
+        $ad = $stmtAd->fetch();
+
+        if ($ad) {
+            $title = $ad['title'];
+            $bannerUrl = $ad['banner_url'];
+            $targetUrl = $ad['target_url'];
+            $durationSeconds = intval($ad['duration_seconds']);
+            $adId = "ad_" . $ad['id_ad'];
+        }
+    } catch (Exception $e) {
+        // Cichy fallback na wypadek, gdyby tabela ads nie została jeszcze utworzona w bazie danych
+    }
+
     echo json_encode([
-        "ad_id" => "ad_bcs_partner",
-        "banner_url" => "https://bcsnagradza.pl/img/logo-1730213850.svg", // Logo BCS jako banner reklamowy
-        "duration_seconds" => 5, // 5 sekund odliczania
+        "ad_id" => $adId,
+        "title" => $title,
+        "banner_url" => $bannerUrl,
+        "target_url" => $targetUrl,
+        "duration_seconds" => $durationSeconds,
         "verification_token" => $token
     ]);
 }

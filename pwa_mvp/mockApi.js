@@ -150,6 +150,9 @@ export class WordleMockBackend {
                         game_token: savedGameToken || undefined
                     })
                 });
+                if (!response.ok) {
+                    throw new Error("Brak połączenia spróbuj ponownie");
+                }
                 const data = await response.json();
                 if (data.status === 'error') {
                     throw new Error(data.message || 'Błąd inicjalizacji gry na serwerze.');
@@ -172,7 +175,7 @@ export class WordleMockBackend {
                 };
             }
             catch (err) {
-                console.error("AJAX Start Game Error, falling back to mock:", err);
+                throw new Error("Brak połączenia spróbuj ponownie");
             }
         }
         await this._delay(300); // Symulacja opóźnienia sieci
@@ -303,10 +306,13 @@ export class WordleMockBackend {
                         word: wordRaw
                     })
                 });
+                if (!response.ok) {
+                    throw new Error("Brak połączenia spróbuj ponownie");
+                }
                 return await response.json();
             }
             catch (err) {
-                console.error("AJAX Submit Word Error, falling back to mock:", err);
+                throw new Error("Brak połączenia spróbuj ponownie");
             }
         }
         await this._delay(500); // Symulacja opóźnienia sieci
@@ -383,16 +389,21 @@ export class WordleMockBackend {
                         game_token: gameToken
                     })
                 });
+                if (!response.ok) {
+                    throw new Error("Brak połączenia spróbuj ponownie");
+                }
                 return await response.json();
             }
             catch (err) {
-                console.error("AJAX Get Ad Error, falling back to mock:", err);
+                throw new Error("Brak połączenia spróbuj ponownie");
             }
         }
         await this._delay(200);
         return {
             ad_id: "ad_bcs_mvp",
+            title: "Wiadomość od Sponsora",
             banner_url: "https://via.placeholder.com/400x200.png?text=REKLAMA+SPONSORA",
+            target_url: "https://bcsnagradza.pl/",
             duration_seconds: 5, // MVP: 5 sekund odliczania
             verification_token: "tok_" + Math.random().toString(36).substring(2, 11)
         };
@@ -411,6 +422,9 @@ export class WordleMockBackend {
                         id_customer: this.idCustomer
                     })
                 });
+                if (!response.ok) {
+                    throw new Error("Brak połączenia spróbuj ponownie");
+                }
                 const data = await response.json();
                 // Czyszczenie game_token dla wszystkich konfiguracji po odebraniu nagrody, aby nowa gra rozpoczęła się od czystej sesji
                 if (typeof localStorage !== 'undefined') {
@@ -424,7 +438,7 @@ export class WordleMockBackend {
                 return data;
             }
             catch (err) {
-                console.error("AJAX Claim Reward Error, falling back to mock:", err);
+                throw new Error("Brak połączenia spróbuj ponownie");
             }
         }
         await this._delay(600);
@@ -486,6 +500,9 @@ export class WordleMockBackend {
                         id_player: this.idPlayer
                     })
                 });
+                if (!response.ok) {
+                    throw new Error("Brak połączenia spróbuj ponownie");
+                }
                 const data = await response.json();
                 if (data.id_player && typeof localStorage !== 'undefined') {
                     this.idPlayer = data.id_player;
@@ -494,7 +511,7 @@ export class WordleMockBackend {
                 return data;
             }
             catch (err) {
-                console.error("AJAX Get User Stats Error, falling back to mock:", err);
+                throw new Error("Brak połączenia spróbuj ponownie");
             }
         }
         return this.db.user;
