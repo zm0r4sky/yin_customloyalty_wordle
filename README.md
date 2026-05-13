@@ -1,59 +1,89 @@
 # YIN Custom Loyalty Wordle - Wordle Gamification
-> **Moduł gamifikacyjny dla programu lojalnościowego PrestaShop, angażujący klientów poprzez codzienną minigrę słowną Wordle i nagradzający ich punktami lojalnościowymi za odgadnięcie słowa dnia.**
+> **Zaawansowany moduł grywalizacyjny dla programu lojalnościowego PrestaShop, angażujący klientów poprzez codzienną minigrę słowną Wordle i nagradzający ich punktami lojalnościowymi za odgadnięcie słowa dnia.**
 
 ---
 
 [![PrestaShop Version](https://img.shields.io/badge/PrestaShop-1.7.x%20--%208.x-df0067?style=for-the-badge&logo=prestashop)](https://www.prestashop.com/)
 [![License](https://img.shields.io/badge/Licencja-Proprietary-blue?style=for-the-badge)](https://en.wikipedia.org/wiki/Proprietary_software)
 [![PHP](https://img.shields.io/badge/PHP-%3E%3D%207.2-777bb4?style=for-the-badge&logo=php)](https://www.php.net/)
+[![Vitest](https://img.shields.io/badge/Vitest-Passed-4db33d?style=for-the-badge&logo=vitest)](https://vitest.dev/)
+[![Playwright](https://img.shields.io/badge/Playwright-Passed-2e8555?style=for-the-badge&logo=playwright)](https://playwright.dev/)
 
 ---
 
 ## 📖 O projekcie
 
-**YIN Custom Loyalty Wordle** to zaawansowany moduł rozszerzający funkcjonalność systemu lojalnościowego `yin_customloyalty`. Wprowadza on do e-sklepu mechanizmy grywalizacji (Gamification) poprzez popularną na całym świecie grę słowną **Wordle**.
+**YIN Custom Loyalty Wordle** to innowacyjny moduł rozszerzający funkcjonalność systemu lojalnościowego `yin_customloyalty`. Wprowadza on do e-sklepu mechanizmy grywalizacji (Gamification) poprzez popularną na całym świecie grę słowną **Wordle**.
 
-Zasada działania jest niezwykle angażująca dla klienta: raz na dobę ma on możliwość odgadnięcia ukrytego, 5-literowego słowa klucza (powiązanego z asortymentem sklepu lub powiązaną branżą). Za pomyślne rozwiązanie zagadki w maksymalnie 6 próbach, portfel lojalnościowy gracza zostaje zasilony punktami. Taki mechanizm buduje nawyk codziennego odwiedzania sklepu (Retention Rate) oraz bezpośrednio wspiera lojalność wobec marki.
-
-### 🗺️ Gdzie jesteśmy i dokąd zmierzamy?
-Jesteśmy na **początku drogi tego projektu**. 
-* **Etap Obecny (PWA MVP):** Aplikacja działa jako wysoce zoptymalizowana, responsywna aplikacja progresywna (PWA) napisana w **TypeScript**, z silnikiem gry emulowanym po stronie klienta (`localStorage`).
-* **Etap Docelowy (Integracja PrestaShop 8):** PWA zostanie wbudowane w natywny moduł PrestaShop 8. Silnik gry (Source of Truth) zostanie przeniesiony na backend PHP, a punkty będą przyznawane w zabezpieczony kryptograficznie sposób bezpośrednio w bazie danych systemu `yin_customloyalty`.
+Zasada działania opiera się na budowaniu nawyku codziennego logowania (Retention Rate): raz na dobę gracz ma możliwość odgadnięcia ukrytego słowa klucza. Za pomyślne rozwiązanie zagadki w maksymalnie 6 próbach, po obejrzeniu krótkiej reklamy sponsora, portfel lojalnościowy gracza zostaje zasilony punktami lojalnościowymi.
 
 ---
 
-## ✨ Główne cechy i funkcjonalności
+## 🗺️ Stan obecny (Co zostało wykonane?)
 
-*   **Mechanika gry Wordle:** Klasyczny silnik gry (6 prób, oznaczanie liter kolorami: zielony - correct, żółty - present, szary - absent) w pełnej polskiej lokalizacji językowej (`PL`).
-*   **Mobilny i Responsywny Layout:** Siatka gry zbudowana przy użyciu modern CSS oraz **Container Queries**. Gwarantuje to idealnie kwadratowe, samopozycjonujące się kafelki i optymalny układ klawiatury na każdym telefonie (np. iPhone 12 Pro) bez ucinania widoku.
-*   **Wielofunkcyjna Klawiatura:** Przyklejona do dołu ekranu wirtualna klawiatura z dużymi, dotykowymi przyciskami (w tym czytelnymi *ENTER* i *BACKSPACE*) oraz pełna integracja z fizyczną klawiaturą komputerową (`keydown`).
-*   **Brama Reklamowa (Ad Gateway):** Blokuje ekran po zakończeniu gry. Użytkownik musi odczekać licznik czasu reklamy sponsorowanej, aby uzyskać token weryfikacyjny odblokowujący przycisk odebrania punktów lojalnościowych.
-*   **Obsługa Offline:** Dzięki PWA (Service Worker `sw.js` oraz Web App Manifest) gra ładuje się i informuje o stanie połączenia specjalnym paskiem ostrzegawczym nawet przy całkowitym braku internetu.
+Zakończyliśmy kluczowy etap transformacji z izolowanego MVP działającego offline do **w pełni zintegrowanego systemu klient-serwer** połączonego z bazą danych MySQL (za pośrednictwem dedykowanego API PHP). 
+
+Oto szczegółowy podział wdrożonych funkcjonalności:
+
+### 1. 🌐 Komunikacja z API i Bezpieczna Weryfikacja
+*   **Architektura API PHP (`host/api.php`):** Bezpieczne wejście aplikacji będące jedynym źródłem prawdy (Source of Truth). Obsługuje akcje `startGame`, `submitWord`, `getAd`, `claimReward`, `getUserStats`, `getLeaderboard` oraz `updateNickname`.
+*   **Jednorazowe sesje i Tokeny:** Każda gra generuje unikalny token sesji zapisywany w bazie. Ukończenie reklamy sponsorskiej jest weryfikowane po stronie serwera za pomocą jednorazowych żetonów (`verification_token`), co uniemożliwia sztuczne dodawanie punktów w konsoli przeglądarki.
+
+### 2. 📺 Brama Reklamowa (Sponsor Ad Gateway)
+*   **Dynamiczne Reklamy z Bazy:** Reklamy są pobierane losowo z tabeli reklamowej (`_ads`), zawierając spersonalizowany tytuł, klikalny link docelowy oraz grafikę banerową.
+*   **Elastyczny Interfejs Baneru:** Dostosowany do proporcji ekranu (CSS `object-fit: contain` na czarnym, eleganckim tle), eliminując rozciąganie obrazu.
+*   **Znikający licznik:** Komunikat informujący o odliczaniu czasu pominięcia reklamy automatycznie znika po upływie czasu, odsłaniając estetycznie przycisk odbioru nagrody.
+
+### 3. 📊 Globalny Ranking Online (Leaderboard)
+*   **Wydajne zapytania MySQL:** Ranking pobiera Top 10 najlepszych graczy sortując według punktów oraz najlepszej serii zwycięstw (streak). Nie obciąża bazy dzięki rezygnacji z niepotrzebnych powiązań JOIN z zewnętrznymi tabelami klientów PrestaShop.
+*   **Wysuwane Szuflady Statystyk (Expandable Drawers):** Kliknięcie dowolnego gracza w rankingu płynnie wysuwa dedykowany panel z precyzyjnymi statystykami grywalizacji:
+    *   *Bieżąca passa* (Current Streak)
+    *   *Suma wygranych gier codziennych* (Daily Won Count)
+    *   *Wskaźnik wygranych gier treningowych* (Free Play Win Ratio %)
+*   **Osobisty Pulpit Gracza:** Na dole modalu wyświetla się spersonalizowana karta podsumowująca Twoje dokładne miejsce w rankingu, sumę punktów i pełne statystyki.
+
+### 4. ✏️ Własne Pseudonimy Graczy (Custom Nicknames)
+*   **Modyfikacja Profilu:** W zakładce ustawień dodano dedykowaną sekcję umożliwiającą wpisanie własnego nicku (maksymalnie 20 znaków).
+*   **Walidacja:** System oczyszcza pseudonimy ze znaków specjalnych i tagów HTML, zachowując polskie znaki diakrytyczne oraz spacje, po czym bezpiecznie zapisuje je w bazie danych.
+*   **Hierarchia Wyświetlania Nazw:** System w rankingu i nagłówku priorytetyzuje nazwy w następujący sposób:
+    1.  *Nickname* zdefiniowany przez gracza.
+    2.  Domyślny fallback: `"Gracz #ID"`.
+
+### 5. 💰 Ewidencja Punktów per Gra
+*   Nowa kolumna `points_earned` w tabeli `_games` na bieżąco rejestruje dokładną ilość punktów przyznaną za ukończenie konkretnej rozgrywki (z uwzględnieniem bonusu za streak), co pozwala na precyzyjną analitykę aktywności graczy.
 
 ---
 
-## 🏗️ Architektura i Przepływ danych
+## 🏗️ Przepływ danych w grze (Sequence Diagram)
 
-### Przepływ gry (Stan obecny - PWA)
+Oto aktualny schemat komunikacji sieciowej od otwarcia gry do odebrania nagrody lojalnościowej:
+
 ```mermaid
 sequenceDiagram
     autonumber
-    participant U as Użytkownik / Gracz
-    participant UI as Interfejs PWA (src/app.ts)
-    participant E as Silnik Gry (src/mockApi.ts)
-    participant LS as LocalStorage (Browser Cache)
+    participant U as Gracz (Interfejs PWA)
+    participant API as API PHP (host/api.php)
+    participant DB as Baza danych MySQL
 
-    U->>UI: Otwiera grę w przeglądarce
-    UI->>E: startGame('daily')
-    E->>LS: Pobierz stan sesji i historię
-    LS-->>E: Zwrócenie stanu zapisu
-    E-->>UI: Rozpoczęcie rundy (attempts_left, status)
+    U->>API: startGame(type, preferred_length)
+    API->>DB: Sprawdź historię / stwórz sesję gry
+    DB-->>API: Sesja (game_token, word_length)
+    API-->>U: Token gry i stan planszy
     
-    U->>UI: Wpisuje słowo i klika ENTER
-    UI->>E: submitWord(game_id, word)
-    Note over E: Walidacja liter (correct/present/absent)
-    E->>LS: Zapisz stan próby
-    E-->>UI: Zwrócenie wyników kolorów liter i stanu (playing/won_pending_ad/lost_pending_ad)
+    U->>API: submitWord(game_token, word)
+    Note over API: Walidacja liter (correct/present/absent)
+    API->>DB: Zapisz próbę & zaktualizuj game_state
+    API-->>U: Wynik kolorów kafelków i status (won_pending_ad / lost_pending_ad)
+
+    U->>API: getAd(game_token)
+    API->>DB: Wygeneruj verification_token i pobierz losowy baner reklamowy
+    API-->>U: Szczegóły reklamy (image, target_url, verification_token)
+    
+    Note over U: Odliczanie czasu reklamy (Sponsor Ad View)
+    
+    U->>API: claimReward(game_token, verification_token)
+    API->>DB: Zweryfikuj token reklamy, zaktualizuj passę (streak), przyznaj punkty w _player_stats i zapisz points_earned w _games
+    API-->>U: Sukces (points_earned, new_streak)
 ```
 
 ---
@@ -63,106 +93,53 @@ sequenceDiagram
 ```text
 yin_customloyalty_wordle/
 ├── src/                          # Kod źródłowy TypeScript (Source of Truth!)
-│   ├── app.ts                    # UI controller, obsługa DOM, zdarzenia, klawiatura, powiadomienia
-│   └── mockApi.ts                # Silnik gry, dictionary, system punktacji, ad-gateway, stany sesji
+│   ├── app.ts                    # UI controller, obsługa DOM, ranking, dynamiczny pseudonim, animacje drawerów
+│   └── mockApi.ts                # Łącznik API (fetch HTTP), mockowa baza LocalStorage dla testów jednostkowych
 ├── pwa_mvp/                      # Skompilowane pliki produkcyjne (Serwowane do przeglądarki!)
 │   ├── app.js                    # Skompilowany kontroler UI
 │   ├── mockApi.js                # Skompilowany silnik gry
-│   ├── index.html                # Punkt wejścia aplikacji
-│   ├── style.css                 # Główne, responsywne arkusze stylów
-│   ├── manifest.json             # Konfiguracja instalacji PWA
+│   ├── index.html                # Punkt wejścia aplikacji (Siatka, Modale)
+│   ├── style.css                 # Główne arkusze stylów (Container Queries, animacje drawerów)
+│   ├── manifest.json             # PWA Manifest
 │   └── sw.js                     # PWA Service Worker (Zapis offline)
+├── host/                         # Backend produkcyjny (PHP + MySQL)
+│   ├── api.php                   # Główny kontroler API PHP i router akcji
+│   └── schema.sql                # Schemat struktury bazy danych dla hostingu
 ├── tests/                        # Kompleksowy pakiet testów automatycznych
 │   ├── unit/                     # Testy jednostkowe logiki silnika
-│   │   └── mockApi.test.ts       # Testy Vitest (Happy DOM) dla WordleMockBackend
+│   │   └── mockApi.test.ts       # Testy Vitest (Happy DOM) dla WordleMockBackend i obsługi pseudonimów
 │   └── e2e/                      # Testy integracyjne i interfejsu (End-to-End)
-│       └── wordle.spec.ts        # Testy Playwright (interakcje, brama reklamowa, offline)
-├── .github/workflows/            # Konfiguracja CI/CD
-│   └── test.yml                  # Potok testowy uruchamiający testy w chmurze przy pushu
+│       └── wordle.spec.ts        # Testy Playwright (interakcje, brama reklamowa, offline, kafelki)
 ├── tsconfig.json                 # Konfiguracja kompilatora TypeScript
 ├── vitest.config.ts              # Konfiguracja środowiska testów jednostkowych Vitest
-└── playwright.config.js          # Konfiguracja przeglądarek testowych Playwright
+└── playwright.config.ts          # Konfiguracja przeglądarek testowych Playwright
 ```
 
 ---
 
-## ⚙️ Jak uruchomić i testować lokalnie?
+## 🧪 Potwierdzona Jakość i Testy (100% Success)
 
-Lokalny serwer to pierwsze i najważniejsze miejsce testowania gry przed wypchnięciem zmian na produkcję.
+Projekt posiada w pełni skonfigurowane, automatyczne środowisko testowe, które gwarantuje brak regresji przy wprowadzaniu nowych zmian. 
 
-### 1. Instalacja zależności deweloperskich
-```powershell
-# Uruchom w CMD lub PowerShell w katalogu projektu:
-cmd /c "npm install"
-```
+Wszystkie testy uruchamiane są lokalnie oraz automatycznie przy każdym wypchnięciu zmian do repozytorium (CI/CD GitHub Actions):
 
-### 2. Kompilacja TypeScriptu do JavaScriptu
-Przeglądarka uruchamia pliki `.js` z folderu `pwa_mvp`. Po modyfikacji jakichkolwiek plików w `src/` (TypeScript), musisz je skompilować:
-```powershell
-cmd /c "npm run build"
-```
-
-### 3. Uruchomienie lokalnego serwera
-```powershell
-cmd /c "npm run serve"
-```
-Aplikacja zostanie uruchomiona lokalnie. Otwórz w przeglądarce adres:
-👉 **[http://127.0.0.1:8080](http://127.0.0.1:8080)**
+*   **15/15 Testów jednostkowych Vitest (`npm run test:unit`)** — w odizolowanym środowisku testowana jest cała logika silnika, obsługa uaktualniania pseudonimów, podwójne odbieranie nagród, walidacja słownika i generowanie passy. **Status: PASSED**.
+*   **9/9 Testów integracyjnych Playwright (`npm run test:e2e`)** — testują zachowanie w prawdziwych bezgłowych instancjach przeglądarki Chromium, klikanie, wpisywanie z klawiatury fizycznej i wirtualnej, oraz pełne odliczanie bramki reklamowej. **Status: PASSED**.
 
 ---
 
-## 🧪 Automatyczne Testy (Unit & E2E)
+## 🔮 Plany na następny krok (What's Next?)
 
-Projekt posiada w pełni skonfigurowane, automatyczne środowisko testowe.
+W nadchodzącym sprincie deweloperskim skupimy się na pełnej, natywnej integracji z systemem modułów sklepowych PrestaShop 8:
 
-### Uruchomienie testów jednostkowych (Vitest)
-Testują logikę punktacji, limitów prób, verify tokenów reklamowych w odizolowanym środowisku Happy DOM:
-```powershell
-cmd /c "npm run test:unit"
-```
-
-### Uruchomienie testów E2E (Playwright)
-Otwierają bezgłową (headless) instancję przeglądarki Chromium, symulują kliknięcia wirtualnej klawiatury, odliczanie reklamy oraz reakcję na brak sieci:
-```powershell
-cmd /c "npm run test:e2e"
-```
-
-### Ciągła Integracja (GitHub Actions)
-Każdy push do gałęzi `main` uruchamia potok testowy na GitHubie. Wdrożyliśmy zaawansowane mechanizmy **cachowania**:
-*   **Cache Node Modules (`cache: npm`)** – drastycznie skraca czas instalacji zależności.
-*   **Cache Playwright Browsers (`~/.cache/ms-playwright`)** – zapobiega ponownemu pobieraniu przeglądarek przy każdym uruchomieniu, oszczędzając ponad 60-80% czasu trwania budowania w chmurze.
-
----
-
-## 🔮 Przyszły plan rozwoju (Integracja PrestaShop 8)
-
-Gdy przejdziemy do fazy pełnej integracji z ekosystemem modułów PrestaShop 8, zrealizujemy następujące kroki:
-
-1.  **Przeniesienie walidacji słowa na backend (Zabezpieczenie przed cheatowaniem):**
-    *   Wpisane przez użytkownika słowo będzie wysyłane żądaniem AJAX do kontrolera frontowego modułu PrestaShop.
-    *   Baza danych PrestaShop zweryfikuje, czy słowo jest poprawne i zwróci tablicę z wynikami kolorów liter. Słowo dnia nigdy nie zostanie wysłane do przeglądarki użytkownika przed ukończeniem rozgrywki.
-2.  **Integracja bazodanowa:**
-    *   **Tabela `ps_bn_yin_customloyalty_wordle_words`** będzie przechowywać słowa dnia ustawiane przez administratora w panelu Back-Office.
-    *   **Tabela `ps_bn_yin_customloyalty_wordle_history`** będzie zabezpieczać przed ponownym rozegraniem gry tego samego dnia przez zalogowanego klienta.
-3.  **Podpis kryptograficzny nagrody:**
-    *   Brama reklamowa wywoła endpoint backendu, który po weryfikacji obejrzenia reklamy wygeneruje unikalny token podpisany kluczem zabezpieczającym (HMAC-SHA256).
-    *   Token ten będzie wymagany do zgłoszenia wygranej w module lojalnościowym, co uniemożliwi sztuczne nabijanie punktów z poziomu konsoli JS.
-4.  **Panel Zarządzania (Back-Office):**
-    *   Możliwość definiowania nagród punktowych (punkty bazowe, bonus za szybkie odgadnięcie, bonus za serię/streak).
-    *   Kalendarz słów dnia ułatwiający planowanie haseł na cały rok.
-
----
-
-## 📝 Warunki Licencyjne i Prawa Autorskie
-
-> [!WARNING]
-> **Moduł objęty jest ścisłą licencją komercyjną (Custom Proprietary License).**
-
-Wszystkie prawa do kodu źródłowego, grafik, logiki oraz dokumentacji są zastrzeżone na rzecz autora:
-*   **Autor:** Mariusz Opach
-*   **Copyright:** © 2026 Mariusz Opach. Wszelkie prawa zastrzeżone.
-
-Bez uprzedniej, pisemnej zgody autora zabrania się:
-*   Kopiowania, dystrybucji lub modyfikacji kodu w celach innych niż użytkowanie na licencjonowanej domenie.
-*   Odsprzedaży lub udostępniania osobom trzecim.
-*   Dekompilacji lub inżynierii wstecznej modułu.
+1.  **Przeniesienie plików backendu do oficjalnej struktury modułu:**
+    *   Przeniesienie `api.php` do oficjalnej architektury modułu PrestaShop (`/modules/yin_customloyalty_wordle/controllers/front/api.php`).
+    *   Adaptacja zapytań bazodanowych na użycie natywnego silnika DB PrestaShop (`Db::getInstance()`) oraz automatycznego dopisywania prefiksów tabel (`_DB_PREFIX_`).
+2.  **Integracja z kontem Klienta PrestaShop:**
+    *   Automatyczne powiązanie identyfikatora `id_customer` na podstawie zalogowanej sesji ciasteczka PrestaShop (`$this->context->customer->id`), co eliminuje potrzebę przekazywania ID klienta krytycznie w zapytaniach JS i zapobiega nadużyciom.
+3.  **Kryptograficzny podpis punktów (HMAC-SHA256):**
+    *   Dodanie podpisu kryptograficznego do tokenów reklamowych przy użyciu klucza prywatnego zapisanego w konfiguracji sklepu. Gwarantuje to, że żadne punkty nie zostaną przyznane bez faktycznego, udokumentowanego obejrzenia reklamy na serwerze.
+4.  **Panel Konfiguracyjny Back-Office (PrestaShop Admin):**
+    *   Zbudowanie formularza ustawień nagradzania punktowego (punkty bazowe za słowo, bonusy za streak).
+    *   Wygodny kalendarz do planowania haseł dnia na nadchodzące miesiące.
+    *   Menedżer reklam pozwalający na proste wgrywanie grafik sponsorów i przypisywanie im linków docelowych z poziomu administracyjnego panelu sklepu.
