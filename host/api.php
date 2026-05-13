@@ -112,6 +112,10 @@ switch ($action) {
         handleGetLeaderboard($db, $input);
         break;
 
+    case 'updateNickname':
+        handleUpdateNickname($db, $input);
+        break;
+
     default:
         echo json_encode([
             "status" => "error",
@@ -653,9 +657,9 @@ function handleClaimReward($db, $input) {
 
     // D. Oznacz sesję jako pomyślnie nagrodzoną / zakończoną
     $stmtEnd = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_games` 
-        SET `game_state` = 'completed_rewarded', `verification_token` = NULL, `date_upd` = NOW() 
+        SET `game_state` = 'completed_rewarded', `points_earned` = ?, `verification_token` = NULL, `date_upd` = NOW() 
         WHERE `game_token` = ?");
-    $stmtEnd->execute([$gameToken]);
+    $stmtEnd->execute([$earnedPoints, $gameToken]);
 
     echo json_encode([
         "status" => "success",
@@ -683,8 +687,10 @@ function handleGetUserStats($db, $input) {
     if ($stats) {
         echo json_encode([
             "id_player" => intval($stats['id_player']),
+            "nickname" => $stats['nickname'] ?? null,
             "points" => intval($stats['points']),
             "streak" => intval($stats['streak']),
+            "max_streak" => intval($stats['max_streak']),
             "daily_won_count" => intval($stats['daily_won_count']),
             "free_won_count" => intval($stats['free_won_count']),
             "free_played_count" => intval($stats['free_played_count'])
@@ -692,8 +698,10 @@ function handleGetUserStats($db, $input) {
     } else {
         echo json_encode([
             "id_player" => $idPlayer,
+            "nickname" => null,
             "points" => 0,
             "streak" => 0,
+            "max_streak" => 0,
             "daily_won_count" => 0,
             "free_won_count" => 0,
             "free_played_count" => 0
@@ -711,45 +719,31 @@ function handleGetLeaderboard($db, $input) {
     try {
         $stmt = $db->prepare("
             SELECT 
-                s.`id_player`,
-                s.`id_customer`,
-                s.`points`,
-                s.`streak`,
-                s.`max_streak`,
-                c.`firstname`,
-                c.`lastname`
-            FROM `ps_bn_yin_customloyalty_wordle_player_stats` s
-            LEFT JOIN `ps_customer` c ON s.`id_customer` = c.`id_customer`
-            ORDER BY s.`points` DESC, s.`max_streak` DESC, s.`id_player` ASC
-            LIMIT 10
-        ");
-        $stmt->execute();
-        $rawRows = $stmt->fetchAll();
-    } catch (Exception $e) {
-        $stmt = $db->prepare("
-            SELECT 
                 `id_player`,
                 `id_customer`,
+                `nickname`,
                 `points`,
                 `streak`,
                 `max_streak`,
-                '' as `firstname`,
-                '' as `lastname`
+                `daily_won_count`,
+                `free_won_count`,
+                `free_played_count`
             FROM `ps_bn_yin_customloyalty_wordle_player_stats`
             ORDER BY `points` DESC, `max_streak` DESC, `id_player` ASC
             LIMIT 10
         ");
         $stmt->execute();
         $rawRows = $stmt->fetchAll();
+    } catch (Exception $e) {
+        $rawRows = [];
     }
 
     $leaderboard = [];
     $rank = 1;
     foreach ($rawRows as $row) {
         $name = '';
-        if (!empty($row['firstname'])) {
-            $lastNameInitial = !empty($row['lastname']) ? ' ' . mb_substr($row['lastname'], 0, 1) . '.' : '';
-            $name = mb_convert_case($row['firstname'], MB_CASE_TITLE, "UTF-8") . $lastNameInitial;
+        if (!empty($row['nickname'])) {
+            $name = $row['nickname'];
         } else {
             $name = "Gracz #" . $row['id_player'];
         }
@@ -760,14 +754,17 @@ function handleGetLeaderboard($db, $input) {
             "name" => $name,
             "points" => intval($row['points']),
             "streak" => intval($row['streak']),
-            "max_streak" => intval($row['max_streak'])
+            "max_streak" => intval($row['max_streak']),
+            "daily_won_count" => intval($row['daily_won_count']),
+            "free_won_count" => intval($row['free_won_count']),
+            "free_played_count" => intval($row['free_played_count'])
         ];
     }
 
     // Pobierz własną pozycję gracza
     $myRankInfo = null;
     if ($idPlayerClient > 0) {
-        $stmtPlayer = $db->prepare("SELECT `points`, `max_streak` FROM `ps_bn_yin_customloyalty_wordle_player_stats` WHERE `id_player` = ? LIMIT 1");
+        $stmtPlayer = $db->prepare("SELECT `points`, `max_streak`, `daily_won_count`, `free_won_count`, `free_played_count` FROM `ps_bn_yin_customloyalty_wordle_player_stats` WHERE `id_player` = ? LIMIT 1");
         $stmtPlayer->execute([$idPlayerClient]);
         $playerStats = $stmtPlayer->fetch();
         
@@ -786,7 +783,10 @@ function handleGetLeaderboard($db, $input) {
             $myRankInfo = [
                 "rank" => $myRank,
                 "points" => $playerPoints,
-                "max_streak" => $playerMaxStreak
+                "max_streak" => $playerMaxStreak,
+                "daily_won_count" => intval($playerStats['daily_won_count']),
+                "free_won_count" => intval($playerStats['free_won_count']),
+                "free_played_count" => intval($playerStats['free_played_count'])
             ];
         }
     }
@@ -795,5 +795,46 @@ function handleGetLeaderboard($db, $input) {
         "status" => "success",
         "leaderboard" => $leaderboard,
         "my_rank" => $myRankInfo
+    ]);
+}
+
+/**
+ * Zapisuje pseudonim (nickname) gracza w bazie danych
+ */
+function handleUpdateNickname($db, $input) {
+    $idPlayer = intval($input['id_player'] ?? 0);
+    $nickname = trim($input['nickname'] ?? '');
+
+    if ($idPlayer <= 0) {
+        echo json_encode(["status" => "error", "message" => "Nieprawidłowy gracz."]);
+        return;
+    }
+
+    // Walidacja pseudonimu
+    if (empty($nickname)) {
+        echo json_encode(["status" => "error", "message" => "Pseudonim nie może być pusty."]);
+        return;
+    }
+
+    if (mb_strlen($nickname, 'UTF-8') > 20) {
+        echo json_encode(["status" => "error", "message" => "Pseudonim może mieć maksymalnie 20 znaków."]);
+        return;
+    }
+
+    // Usunięcie znaków specjalnych, zachowując litery (również polskie diakrytyki) i spacje
+    $nickname = preg_replace('/[^\w\s\p{L}]/u', '', $nickname);
+    $nickname = trim($nickname);
+
+    if (empty($nickname)) {
+        echo json_encode(["status" => "error", "message" => "Pseudonim zawiera niedozwolone znaki."]);
+        return;
+    }
+
+    $stmt = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_player_stats` SET `nickname` = ? WHERE `id_player` = ?");
+    $stmt->execute([$nickname, $idPlayer]);
+
+    echo json_encode([
+        "status" => "success",
+        "nickname" => $nickname
     ]);
 }

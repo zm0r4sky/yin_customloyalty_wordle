@@ -194,7 +194,7 @@ describe('WordleMockBackend Unit Tests', () => {
     expect(daily2.guesses?.length).toBe(1);
   });
 
-  test('should return leaderboard data correctly', async () => {
+  test('should return leaderboard data correctly with game metrics', async () => {
     const backend = new WordleMockBackend();
     const data = await backend.getLeaderboard();
 
@@ -202,7 +202,22 @@ describe('WordleMockBackend Unit Tests', () => {
     expect(data.leaderboard).toHaveLength(5);
     expect(data.leaderboard[0].name).toBe('Jan K.');
     expect(data.leaderboard[0].points).toBe(1250);
+    expect(data.leaderboard[0].daily_won_count).toBe(10);
+    expect(data.leaderboard[0].free_played_count).toBe(30);
     expect(data.my_rank).toBeDefined();
     expect(data.my_rank?.points).toBe(0); // initial points
+  });
+
+  test('should allow updating and saving player nickname', async () => {
+    const backend = new WordleMockBackend();
+    
+    const initialStats = await backend.getUserStats();
+    expect(initialStats.nickname).toBeNull();
+
+    const savedNick = await backend.updateNickname("TestPlayer123");
+    expect(savedNick).toBe("TestPlayer123");
+
+    const statsAfter = await backend.getUserStats();
+    expect(statsAfter.nickname).toBe("TestPlayer123");
   });
 });

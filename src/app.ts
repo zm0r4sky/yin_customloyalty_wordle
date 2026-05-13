@@ -50,6 +50,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeRanking = document.getElementById('close-ranking') as HTMLButtonElement;
     const closeRankingBtn = document.getElementById('close-ranking-btn') as HTMLButtonElement;
 
+    // Nickname elements
+    const inputNickname = document.getElementById('input-nickname') as HTMLInputElement;
+    const btnSaveNickname = document.getElementById('btn-save-nickname') as HTMLButtonElement;
+
     // === DŹWIĘKI (WEB AUDIO API) ===
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     const audioCtx = AudioContextClass ? new AudioContextClass() : null;
@@ -103,6 +107,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Inicjalizacja przełączników w ustawieniach
             if (toggleSwapKeys) toggleSwapKeys.checked = swapEnterBackspace;
+            if (inputNickname && stats.nickname) {
+                inputNickname.value = stats.nickname;
+            }
             updateLengthSelectorUI();
 
             // Próba rozpoczęcia gry codziennej
@@ -375,7 +382,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const isMe = entry.id_player === window.api.idPlayer;
                 html += `
-                    <tr class="${isMe ? 'current-player-row' : ''}">
+                    <tr class="clickable-row ${isMe ? 'current-player-row' : ''}" data-player-id="${entry.id_player}">
                         <td class="col-rank">${medal}</td>
                         <td class="col-name">${escapeHTML(entry.name)}${isMe ? ' (Ty)' : ''}</td>
                         <td class="col-points">💰 ${entry.points}</td>
@@ -391,6 +398,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 
             if (data.my_rank) {
+                const myTotalDaily = data.my_rank.daily_won_count || 0;
+                const myTotalFree = data.my_rank.free_played_count || 0;
+                const myFreeWon = data.my_rank.free_won_count || 0;
+                const myWinRatio = myTotalFree > 0 ? Math.round((myFreeWon / myTotalFree) * 100) : 0;
+                const myCurrentStreak = data.leaderboard.find(e => e.id_player === window.api.idPlayer)?.streak || 0;
+
                 html += `
                     <div class="my-ranking-badge">
                         <div class="my-badge-title">Twoja pozycja w rankingu</div>
@@ -408,6 +421,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <span class="value">🔥 ${data.my_rank.max_streak}</span>
                             </div>
                         </div>
+                        <div class="my-badge-grid" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+                            <div class="my-badge-item">
+                                <span class="label">Passa teraz</span>
+                                <span class="value">🔥 ${myCurrentStreak}</span>
+                            </div>
+                            <div class="my-badge-item">
+                                <span class="label">Wygrane (Daily)</span>
+                                <span class="value">📅 ${myTotalDaily}</span>
+                            </div>
+                            <div class="my-badge-item">
+                                <span class="label">Win Ratio (Free)</span>
+                                <span class="value">🎯 ${myWinRatio}%</span>
+                            </div>
+                        </div>
                     </div>
                 `;
             }
@@ -417,6 +444,60 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 
             rankingBody.innerHTML = html;
+
+            // Obsługa klikania w wiersze rankingu (rozwijanie statystyk)
+            const rows = rankingBody.querySelectorAll('.clickable-row');
+            rows.forEach(row => {
+                row.addEventListener('click', () => {
+                    const nextRow = row.nextElementSibling;
+                    const isExpanded = nextRow && nextRow.classList.contains('ranking-details-row');
+                    
+                    // Zamknij wszystkie inne otwarte
+                    rankingBody.querySelectorAll('.ranking-details-row').forEach(r => r.remove());
+                    rankingBody.querySelectorAll('.clickable-row').forEach(r => r.classList.remove('expanded'));
+
+                    if (!isExpanded) {
+                        row.classList.add('expanded');
+                        const idPlayer = parseInt(row.getAttribute('data-player-id') || '0');
+                        const entry = data.leaderboard.find(e => e.id_player === idPlayer);
+                        if (entry) {
+                            const totalDaily = entry.daily_won_count;
+                            const totalFree = entry.free_played_count;
+                            const freeWon = entry.free_won_count;
+                            const winRatio = totalFree > 0 ? Math.round((freeWon / totalFree) * 100) : 0;
+                            
+                            const detailsRow = document.createElement('tr');
+                            detailsRow.className = 'ranking-details-row';
+                            detailsRow.innerHTML = `
+                                <td colspan="4">
+                                    <div class="player-details-expand">
+                                        <div class="details-grid">
+                                            <div class="details-item">
+                                                <span class="label">Bieżąca passa</span>
+                                                <span class="value">🔥 ${entry.streak}</span>
+                                            </div>
+                                            <div class="details-item">
+                                                <span class="label">Wygrane (Daily)</span>
+                                                <span class="value">📅 ${totalDaily}</span>
+                                            </div>
+                                            <div class="details-item">
+                                                <span class="label">Win Ratio (Free)</span>
+                                                <span class="value">🎯 ${winRatio}% (${freeWon}/${totalFree})</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            `;
+                            row.parentNode?.insertBefore(detailsRow, row.nextSibling);
+                            
+                            // Płynna mikroanimacja wysuwania
+                            setTimeout(() => {
+                                detailsRow.querySelector('.player-details-expand')?.classList.add('open');
+                            }, 10);
+                        }
+                    }
+                });
+            });
 
             const closeBtnDynamic = document.getElementById('close-ranking-btn-dynamic') as HTMLButtonElement;
             if (closeBtnDynamic) {
@@ -500,6 +581,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                         settingsModal.style.display = 'none'; // Zamknij modal po wyborze
                         await resetGame('free');
                     }
+                }
+            });
+        }
+
+        // Obsługa zapisu pseudonimu
+        if (btnSaveNickname && inputNickname) {
+            const saveNicknameFunc = async () => {
+                const nicknameVal = inputNickname.value.trim();
+                if (!nicknameVal) {
+                    showToast("Pseudonim nie może być pusty.");
+                    return;
+                }
+                if (nicknameVal.length > 20) {
+                    showToast("Pseudonim może mieć maks. 20 znaków.");
+                    return;
+                }
+                try {
+                    btnSaveNickname.disabled = true;
+                    const savedNick = await window.api.updateNickname(nicknameVal);
+                    inputNickname.value = savedNick;
+                    showToast("Pseudonim został zaktualizowany!");
+                } catch (e: any) {
+                    showToast(e.message || "Błąd zapisu pseudonimu.");
+                } finally {
+                    btnSaveNickname.disabled = false;
+                }
+            };
+
+            btnSaveNickname.addEventListener('click', saveNicknameFunc);
+            inputNickname.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveNicknameFunc();
                 }
             });
         }

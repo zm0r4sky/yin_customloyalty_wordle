@@ -955,3 +955,63 @@ input:checked+.slider:before {
     font-weight: 800;
     color: #f1f5f9;
 }
+
+/* Expandable Player Details Drawer */
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.clickable-row.expanded {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.ranking-details-row {
+    background-color: #161617;
+}
+
+.ranking-details-row td {
+    padding: 0 !important;
+    border-bottom: 1px solid #222224;
+}
+
+.player-details-expand {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+    padding: 0 15px;
+}
+
+.player-details-expand.open {
+    max-height: 100px;
+    padding: 12px 15px;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    text-align: center;
+}
+
+.details-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.details-item .label {
+    font-size: 0.72rem;
+    color: #888899;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.details-item .value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+}

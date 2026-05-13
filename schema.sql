@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS `ps_bn_yin_customloyalty_wordle_games` (
     `max_attempts` TINYINT UNSIGNED DEFAULT 6,
     `guesses` TEXT DEFAULT NULL,                       -- Wprowadzone dotychczas słowa (zapisane jako tablica JSON ["SKLEP","PUDŁO"])
     `game_state` ENUM('playing', 'won_pending_ad', 'lost_pending_ad', 'completed_rewarded') DEFAULT 'playing',
+    `points_earned` INT UNSIGNED DEFAULT 0,
     `verification_token` VARCHAR(64) DEFAULT NULL,
     `date_add` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `date_upd` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS `ps_bn_yin_customloyalty_wordle_games` (
 CREATE TABLE IF NOT EXISTS `ps_bn_yin_customloyalty_wordle_player_stats` (
     `id_player` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `id_customer` INT UNSIGNED NOT NULL DEFAULT 0, -- 0 dla gości, powiązane z ps_customer dla zalogowanych
+    `nickname` VARCHAR(25) DEFAULT NULL,           -- Unikalny pseudonim gracza (opcjonalny, maks 20 znaków w UI)
     `points` INT UNSIGNED DEFAULT 0,
     `streak` INT UNSIGNED DEFAULT 0,
     `max_streak` INT UNSIGNED DEFAULT 0,

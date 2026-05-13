@@ -63,10 +63,12 @@ export class WordleMockBackend {
         }
         this.db = stored ? JSON.parse(stored) : {
             sessions: {},
-            user: { points: 0, streak: 0, daily_won_count: 0, free_won_count: 0, free_played_count: 0 }
+            user: { points: 0, streak: 0, nickname: null, daily_won_count: 0, free_won_count: 0, free_played_count: 0 }
         };
         // Upewnij się, że liczniki są zainicjalizowane w obiekcie
         if (this.db.user) {
+            if (typeof this.db.user.nickname === 'undefined')
+                this.db.user.nickname = null;
             if (typeof this.db.user.daily_won_count === 'undefined')
                 this.db.user.daily_won_count = 0;
             if (typeof this.db.user.free_won_count === 'undefined')
@@ -542,18 +544,54 @@ export class WordleMockBackend {
         return {
             status: 'success',
             leaderboard: [
-                { rank: 1, id_player: 101, name: "Jan K.", points: 1250, streak: 8, max_streak: 12 },
-                { rank: 2, id_player: 102, name: "Grzegorz B.", points: 980, streak: 5, max_streak: 10 },
-                { rank: 3, id_player: 103, name: "Anna M.", points: 870, streak: 4, max_streak: 8 },
-                { rank: 4, id_player: 104, name: "Krzysztof W.", points: 720, streak: 3, max_streak: 6 },
-                { rank: 5, id_player: 105, name: "Gracz #105", points: 550, streak: 0, max_streak: 5 }
+                { rank: 1, id_player: 101, name: "Jan K.", points: 1250, streak: 8, max_streak: 12, daily_won_count: 10, free_won_count: 24, free_played_count: 30 },
+                { rank: 2, id_player: 102, name: "Grzegorz B.", points: 980, streak: 5, max_streak: 10, daily_won_count: 8, free_won_count: 18, free_played_count: 25 },
+                { rank: 3, id_player: 103, name: "Anna M.", points: 870, streak: 4, max_streak: 8, daily_won_count: 7, free_won_count: 15, free_played_count: 20 },
+                { rank: 4, id_player: 104, name: "Krzysztof W.", points: 720, streak: 3, max_streak: 6, daily_won_count: 5, free_won_count: 10, free_played_count: 15 },
+                { rank: 5, id_player: 105, name: this.db.user.nickname || "Kamil S.", points: 550, streak: 0, max_streak: 5, daily_won_count: 3, free_won_count: 8, free_played_count: 12 }
             ],
             my_rank: {
                 rank: 6,
                 points: this.db.user.points || 0,
-                max_streak: this.db.user.max_streak || 0
+                max_streak: this.db.user.max_streak || 0,
+                daily_won_count: this.db.user.daily_won_count || 0,
+                free_won_count: this.db.user.free_won_count || 0,
+                free_played_count: this.db.user.free_played_count || 0
             }
         };
+    }
+    async updateNickname(nickname) {
+        if (this.isRemoteActive()) {
+            try {
+                const response = await fetch(PRODUCTION_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'updateNickname',
+                        id_player: this.idPlayer,
+                        nickname: nickname
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error("Brak połączenia spróbuj ponownie");
+                }
+                const data = await response.json();
+                if (data.status === 'error') {
+                    throw new Error(data.message);
+                }
+                this.db.user.nickname = data.nickname;
+                this._saveDb();
+                return data.nickname;
+            }
+            catch (err) {
+                throw new Error(err.message || "Brak połączenia spróbuj ponownie");
+            }
+        }
+        // Lokalne mockowe zachowanie
+        const cleanNick = nickname.trim().slice(0, 20);
+        this.db.user.nickname = cleanNick;
+        this._saveDb();
+        return cleanNick;
     }
 }
 // Globalna instancja symulowanego API dla przeglądarki
