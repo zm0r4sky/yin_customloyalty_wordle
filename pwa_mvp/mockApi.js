@@ -516,6 +516,45 @@ export class WordleMockBackend {
         }
         return this.db.user;
     }
+    // Leaderboard
+    async getLeaderboard() {
+        if (this.isRemoteActive()) {
+            try {
+                const response = await fetch(PRODUCTION_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'getLeaderboard',
+                        id_player: this.idPlayer
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error("Brak połączenia spróbuj ponownie");
+                }
+                return await response.json();
+            }
+            catch (err) {
+                throw new Error("Brak połączenia spróbuj ponownie");
+            }
+        }
+        // Lokalne mockowe dane dla testów jednostkowych i lokalnego rozwoju
+        await this._delay(100);
+        return {
+            status: 'success',
+            leaderboard: [
+                { rank: 1, id_player: 101, name: "Jan K.", points: 1250, streak: 8, max_streak: 12 },
+                { rank: 2, id_player: 102, name: "Grzegorz B.", points: 980, streak: 5, max_streak: 10 },
+                { rank: 3, id_player: 103, name: "Anna M.", points: 870, streak: 4, max_streak: 8 },
+                { rank: 4, id_player: 104, name: "Krzysztof W.", points: 720, streak: 3, max_streak: 6 },
+                { rank: 5, id_player: 105, name: "Gracz #105", points: 550, streak: 0, max_streak: 5 }
+            ],
+            my_rank: {
+                rank: 6,
+                points: this.db.user.points || 0,
+                max_streak: this.db.user.max_streak || 0
+            }
+        };
+    }
 }
 // Globalna instancja symulowanego API dla przeglądarki
 if (typeof window !== 'undefined') {

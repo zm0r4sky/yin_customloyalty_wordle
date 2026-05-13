@@ -339,12 +339,123 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    async function loadAndRenderLeaderboard() {
+        const rankingBody = document.querySelector('.ranking-body') as HTMLElement;
+        if (!rankingBody) return;
+
+        rankingBody.innerHTML = `
+            <div class="ranking-loading">
+                <div class="spinner"></div>
+                <p>Pobieranie wyników...</p>
+            </div>
+        `;
+
+        try {
+            const data = await window.api.getLeaderboard();
+            
+            let html = `
+                <div class="ranking-list-container">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th class="col-rank">Poz.</th>
+                                <th class="col-name">Gracz</th>
+                                <th class="col-points">Punkty</th>
+                                <th class="col-streak">Streak Max</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            data.leaderboard.forEach(entry => {
+                let medal = entry.rank.toString();
+                if (entry.rank === 1) medal = '🥇';
+                else if (entry.rank === 2) medal = '🥈';
+                else if (entry.rank === 3) medal = '🥉';
+
+                const isMe = entry.id_player === window.api.idPlayer;
+                html += `
+                    <tr class="${isMe ? 'current-player-row' : ''}">
+                        <td class="col-rank">${medal}</td>
+                        <td class="col-name">${escapeHTML(entry.name)}${isMe ? ' (Ty)' : ''}</td>
+                        <td class="col-points">💰 ${entry.points}</td>
+                        <td class="col-streak">🔥 ${entry.max_streak}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            if (data.my_rank) {
+                html += `
+                    <div class="my-ranking-badge">
+                        <div class="my-badge-title">Twoja pozycja w rankingu</div>
+                        <div class="my-badge-grid">
+                            <div class="my-badge-item">
+                                <span class="label">Miejsce</span>
+                                <span class="value">🏆 #${data.my_rank.rank}</span>
+                            </div>
+                            <div class="my-badge-item">
+                                <span class="label">Suma punktów</span>
+                                <span class="value">💰 ${data.my_rank.points}</span>
+                            </div>
+                            <div class="my-badge-item">
+                                <span class="label">Najlepszy streak</span>
+                                <span class="value">🔥 ${data.my_rank.max_streak}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                <button id="close-ranking-btn-dynamic" class="btn-primary" style="margin-top: 15px;">Rozumiem</button>
+            `;
+
+            rankingBody.innerHTML = html;
+
+            const closeBtnDynamic = document.getElementById('close-ranking-btn-dynamic') as HTMLButtonElement;
+            if (closeBtnDynamic) {
+                closeBtnDynamic.addEventListener('click', () => {
+                    rankingModal.style.display = 'none';
+                });
+            }
+        } catch (e: any) {
+            rankingBody.innerHTML = `
+                <div class="ranking-error">
+                    <p class="error-msg">❌ ${e.message || "Błąd połączenia spróbuj ponownie"}</p>
+                    <button id="retry-ranking-btn" class="btn-primary" style="margin-top: 15px;">Spróbuj ponownie</button>
+                </div>
+            `;
+            const retryBtn = document.getElementById('retry-ranking-btn') as HTMLButtonElement;
+            if (retryBtn) {
+                retryBtn.addEventListener('click', loadAndRenderLeaderboard);
+            }
+        }
+    }
+
+    function escapeHTML(str: string): string {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     // === KONTROLE MODALI NAGŁÓWKA ===
     function setupHeaderControls() {
         // Otwieranie modali
         btnHelp.addEventListener('click', () => helpModal.style.display = 'flex');
         btnSettings.addEventListener('click', () => settingsModal.style.display = 'flex');
-        btnRanking.addEventListener('click', () => rankingModal.style.display = 'flex');
+        btnRanking.addEventListener('click', () => {
+            rankingModal.style.display = 'flex';
+            loadAndRenderLeaderboard();
+        });
 
         // Zamykanie modali
         closeHelp.addEventListener('click', () => helpModal.style.display = 'none');

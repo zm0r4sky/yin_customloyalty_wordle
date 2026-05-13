@@ -193,4 +193,16 @@ describe('WordleMockBackend Unit Tests', () => {
     expect(daily2.game_state).toBe('completed_rewarded');
     expect(daily2.guesses?.length).toBe(1);
   });
+
+  test('should return leaderboard data correctly', async () => {
+    const backend = new WordleMockBackend();
+    const data = await backend.getLeaderboard();
+
+    expect(data.status).toBe('success');
+    expect(data.leaderboard).toHaveLength(5);
+    expect(data.leaderboard[0].name).toBe('Jan K.');
+    expect(data.leaderboard[0].points).toBe(1250);
+    expect(data.my_rank).toBeDefined();
+    expect(data.my_rank?.points).toBe(0); // initial points
+  });
 });

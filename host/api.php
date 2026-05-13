@@ -108,6 +108,10 @@ switch ($action) {
         handleGetUserStats($db, $input);
         break;
 
+    case 'getLeaderboard':
+        handleGetLeaderboard($db, $input);
+        break;
+
     default:
         echo json_encode([
             "status" => "error",
@@ -695,4 +699,101 @@ function handleGetUserStats($db, $input) {
             "free_played_count" => 0
         ]);
     }
+}
+
+/**
+ * Pobiera Top 10 ranking graczy oraz pozycję gracza przekazanego w parametrze
+ */
+function handleGetLeaderboard($db, $input) {
+    $idPlayerClient = intval($input['id_player'] ?? 0);
+
+    // Pobierz Top 10
+    try {
+        $stmt = $db->prepare("
+            SELECT 
+                s.`id_player`,
+                s.`id_customer`,
+                s.`points`,
+                s.`streak`,
+                s.`max_streak`,
+                c.`firstname`,
+                c.`lastname`
+            FROM `ps_bn_yin_customloyalty_wordle_player_stats` s
+            LEFT JOIN `ps_customer` c ON s.`id_customer` = c.`id_customer`
+            ORDER BY s.`points` DESC, s.`max_streak` DESC, s.`id_player` ASC
+            LIMIT 10
+        ");
+        $stmt->execute();
+        $rawRows = $stmt->fetchAll();
+    } catch (Exception $e) {
+        $stmt = $db->prepare("
+            SELECT 
+                `id_player`,
+                `id_customer`,
+                `points`,
+                `streak`,
+                `max_streak`,
+                '' as `firstname`,
+                '' as `lastname`
+            FROM `ps_bn_yin_customloyalty_wordle_player_stats`
+            ORDER BY `points` DESC, `max_streak` DESC, `id_player` ASC
+            LIMIT 10
+        ");
+        $stmt->execute();
+        $rawRows = $stmt->fetchAll();
+    }
+
+    $leaderboard = [];
+    $rank = 1;
+    foreach ($rawRows as $row) {
+        $name = '';
+        if (!empty($row['firstname'])) {
+            $lastNameInitial = !empty($row['lastname']) ? ' ' . mb_substr($row['lastname'], 0, 1) . '.' : '';
+            $name = mb_convert_case($row['firstname'], MB_CASE_TITLE, "UTF-8") . $lastNameInitial;
+        } else {
+            $name = "Gracz #" . $row['id_player'];
+        }
+
+        $leaderboard[] = [
+            "rank" => $rank++,
+            "id_player" => intval($row['id_player']),
+            "name" => $name,
+            "points" => intval($row['points']),
+            "streak" => intval($row['streak']),
+            "max_streak" => intval($row['max_streak'])
+        ];
+    }
+
+    // Pobierz własną pozycję gracza
+    $myRankInfo = null;
+    if ($idPlayerClient > 0) {
+        $stmtPlayer = $db->prepare("SELECT `points`, `max_streak` FROM `ps_bn_yin_customloyalty_wordle_player_stats` WHERE `id_player` = ? LIMIT 1");
+        $stmtPlayer->execute([$idPlayerClient]);
+        $playerStats = $stmtPlayer->fetch();
+        
+        if ($playerStats) {
+            $playerPoints = intval($playerStats['points']);
+            $playerMaxStreak = intval($playerStats['max_streak']);
+            
+            $stmtRank = $db->prepare("
+                SELECT COUNT(*) + 1 
+                FROM `ps_bn_yin_customloyalty_wordle_player_stats` 
+                WHERE `points` > ? OR (`points` = ? AND `max_streak` > ?) OR (`points` = ? AND `max_streak` = ? AND `id_player` < ?)
+            ");
+            $stmtRank->execute([$playerPoints, $playerPoints, $playerMaxStreak, $playerPoints, $playerMaxStreak, $idPlayerClient]);
+            $myRank = intval($stmtRank->fetchColumn());
+
+            $myRankInfo = [
+                "rank" => $myRank,
+                "points" => $playerPoints,
+                "max_streak" => $playerMaxStreak
+            ];
+        }
+    }
+
+    echo json_encode([
+        "status" => "success",
+        "leaderboard" => $leaderboard,
+        "my_rank" => $myRankInfo
+    ]);
 }
