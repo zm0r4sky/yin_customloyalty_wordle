@@ -187,8 +187,8 @@ function handleStartGame($db, $input) {
         if ($activeGame) {
             $activeLength = mb_strlen($activeGame['target_word'], 'UTF-8');
             
-            // Jeśli gracz przesłał nową preferencję długości (np. 6) różną od aktualnej gry (pomijamy dla 0, czyli trybu Losowo)
-            if ($rawLengthInput !== 0 && $rawLengthInput !== $activeLength) {
+            // Jeśli gracz przesłał nową preferencję długości różną od aktualnej gry ORAZ nie jest to wznowienie tej samej sesji (np. po odświeżeniu strony)
+            if ($gameToken !== $activeGame['game_token'] && $rawLengthInput !== $activeLength) {
                 // Walkower: zwiększamy licznik rozegranych gier we Free Play (ale nie wygranych!)
                 $stmtForfeitStats = $db->prepare("UPDATE `ps_bn_yin_customloyalty_wordle_player_stats` 
                     SET `free_played_count` = `free_played_count` + 1 
@@ -204,7 +204,7 @@ function handleStartGame($db, $input) {
                 // Usuwamy token starej gry, by zmusić do rozpoczęcia nowej sesji o nowej długości
                 $gameToken = '';
             } else {
-                // Ta sama długość lub tryb Losowo - wznawiamy grę
+                // Ta sama długość lub odświeżenie sesji - wznawiamy grę
                 $gameToken = $activeGame['game_token'];
             }
         }

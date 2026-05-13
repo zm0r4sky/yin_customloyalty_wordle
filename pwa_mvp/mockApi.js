@@ -195,7 +195,7 @@ export class WordleMockBackend {
             }
             if (activeSess && activeSessId) {
                 const activeLength = this.dailyWord ? this.dailyWord.length : 5;
-                if (preferredLength !== 0 && preferredLength !== activeLength) {
+                if (preferredLength !== activeLength) {
                     // Walkower: naliczamy grę jako rozegraną i zamykamy jako zakończoną porażką
                     this.db.user.free_played_count = (this.db.user.free_played_count || 0) + 1;
                     activeSess.state = 'completed';
@@ -209,7 +209,7 @@ export class WordleMockBackend {
                     }
                 }
                 else {
-                    // Wznawiamy istniejącą grę o tej samej długości lub w trybie Losowo
+                    // Wznawiamy istniejącą grę o tej samej długości
                     const guesses = activeSess.attempts.map(word => {
                         return { word, result: this._evaluateGuess(word, this.dailyWord) };
                     });
