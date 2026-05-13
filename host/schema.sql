@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `ps_bn_yin_customloyalty_wordle_games` (
     `attempts` TINYINT UNSIGNED DEFAULT 0,
     `max_attempts` TINYINT UNSIGNED DEFAULT 6,
     `guesses` TEXT DEFAULT NULL,                       -- Wprowadzone dotychczas słowa (zapisane jako tablica JSON ["SKLEP","PUDŁO"])
-    `game_state` ENUM('playing', 'won_pending_ad', 'lost_pending_ad', 'completed_rewarded') DEFAULT 'playing',
+    `game_state` ENUM('playing', 'won_pending_ad', 'lost_pending_ad', 'completed_rewarded', 'completed_failed') DEFAULT 'playing',
     `points_earned` INT UNSIGNED DEFAULT 0,
     `verification_token` VARCHAR(64) DEFAULT NULL,
     `date_add` DATETIME DEFAULT CURRENT_TIMESTAMP,
